@@ -429,28 +429,72 @@ class InventoryService:
 
             # Phase 1: Validate all candidate items
             items_to_commit = []
+            allocated_in_run: Dict[int, int] = {}
             for item in plan.candidate_allocations:
                 req_qty = item.get("quantity", 0)
                 if req_qty <= 0:
                     raise AuthoritativeRuleViolationException(f"Invalid allocation quantity: {req_qty}")
 
+                target_wh_id = warehouse.id
+                if item.get("from_warehouse"):
+                    source_wh = db.query(Warehouse).filter_by(code=item["from_warehouse"]).first()
+                    if source_wh:
+                        target_wh_id = source_wh.id
+
                 product = cls._resolve_product(db, item)
-                batch = cls._resolve_and_lock_batch(db, warehouse.id, product.id, item)
-
-                if batch.expiry_date and batch.expiry_date < today:
-                    error_msg = f"Batch '{batch.batch_number}' expired on {batch.expiry_date}."
-                    cls._rollback_and_reject_plan(db, plan, error_msg)
-                    raise ExpiredBatchException(error_msg)
-
-                if batch.available_quantity < req_qty:
-                    error_msg = (
-                        f"Insufficient available stock for product '{product.sku}' in batch '{batch.batch_number}'. "
-                        f"Requested: {req_qty}, Available: {batch.available_quantity}."
+                if "batch_id" in item or "batch_number" in item:
+                    batch = cls._resolve_and_lock_batch(db, target_wh_id, product.id, item, allocated_in_run)
+                    if batch.expiry_date and batch.expiry_date < today:
+                        error_msg = f"Batch '{batch.batch_number}' expired on {batch.expiry_date}."
+                        cls._rollback_and_reject_plan(db, plan, error_msg)
+                        raise ExpiredBatchException(error_msg)
+                    rem = batch.available_quantity - allocated_in_run.get(batch.id, 0)
+                    if rem < req_qty:
+                        error_msg = (
+                            f"Insufficient available stock for product '{product.sku}' in batch '{batch.batch_number}'. "
+                            f"Requested: {req_qty}, Available: {rem}."
+                        )
+                        cls._rollback_and_reject_plan(db, plan, error_msg)
+                        raise InsufficientInventoryException(error_msg)
+                    allocated_in_run[batch.id] = allocated_in_run.get(batch.id, 0) + req_qty
+                    items_to_commit.append((product, batch, req_qty, item))
+                else:
+                    needed = req_qty
+                    eligible_batches = (
+                        db.query(InventoryBatch)
+                        .filter_by(warehouse_id=target_wh_id, product_id=product.id)
+                        .order_by(InventoryBatch.expiry_date.asc().nulls_last(), InventoryBatch.id.asc())
+                        .with_for_update()
+                        .all()
                     )
-                    cls._rollback_and_reject_plan(db, plan, error_msg)
-                    raise InsufficientInventoryException(error_msg)
-
-                items_to_commit.append((product, batch, req_qty, item))
+                    allocated_for_item = 0
+                    expired_batches_found = []
+                    for b in eligible_batches:
+                        if b.expiry_date and b.expiry_date < today:
+                            expired_batches_found.append(b)
+                            continue
+                        available = b.available_quantity - allocated_in_run.get(b.id, 0)
+                        if available <= 0:
+                            continue
+                        take = min(needed, available)
+                        allocated_in_run[b.id] = allocated_in_run.get(b.id, 0) + take
+                        items_to_commit.append((product, b, take, item))
+                        needed -= take
+                        allocated_for_item += take
+                        if needed == 0:
+                            break
+                    if needed > 0:
+                        if expired_batches_found and allocated_for_item == 0:
+                            b_exp = expired_batches_found[0]
+                            error_msg = f"Batch '{b_exp.batch_number}' expired on {b_exp.expiry_date}."
+                            cls._rollback_and_reject_plan(db, plan, error_msg)
+                            raise ExpiredBatchException(error_msg)
+                        error_msg = (
+                            f"Insufficient available stock for product '{product.sku}' in warehouse. "
+                            f"Requested: {req_qty}, Available: {allocated_for_item}."
+                        )
+                        cls._rollback_and_reject_plan(db, plan, error_msg)
+                        raise InsufficientInventoryException(error_msg)
 
         # Phase 2: Transactional Mutations and Audit Logging
         try:
@@ -482,7 +526,7 @@ class InventoryService:
 
                     allocation = PlanAllocation(
                         plan_id=plan.id,
-                        source_warehouse_id=warehouse.id,
+                        source_warehouse_id=batch.warehouse_id,
                         destination_store_id=item.get("destination_store_id", destination_store.id),
                         product_id=product.id,
                         batch_id=batch.id,
@@ -567,19 +611,25 @@ class InventoryService:
 
     @classmethod
     def _resolve_product(cls, db: Session, item: Dict[str, Any]) -> Product:
-        """Resolves product by sku, product_id, or batch_id."""
+        """Resolves product by sku, product_id, batch_id, or name pattern."""
+        import re
         prod = None
-        if "product_id" in item:
+        if item.get("product_id"):
             prod = db.query(Product).filter_by(id=item["product_id"]).first()
-        elif "sku" in item:
+        elif item.get("sku"):
             prod = db.query(Product).filter_by(sku=item["sku"]).first()
-        elif "batch_id" in item:
+        elif item.get("batch_id"):
             batch = db.query(InventoryBatch).filter_by(id=item["batch_id"]).first()
             if batch:
                 prod = db.query(Product).filter_by(id=batch.product_id).first()
+        
+        if not prod and item.get("product"):
+            match = re.search(r"(SKU-\d+)", str(item["product"]))
+            if match:
+                prod = db.query(Product).filter_by(sku=match.group(1)).first()
 
         if not prod:
-            identifier = item.get("sku") or item.get("product_id") or item.get("batch_id")
+            identifier = item.get("sku") or item.get("product_id") or item.get("batch_id") or item.get("product")
             raise EntityNotFoundException("Product", identifier)
         return prod
 
@@ -590,8 +640,10 @@ class InventoryService:
         warehouse_id: int,
         product_id: int,
         item: Dict[str, Any],
+        allocated_in_run: Optional[Dict[int, int]] = None,
     ) -> InventoryBatch:
         """Resolves target batch by batch_id, batch_number, or FEFO unexpired selection."""
+        allocated = allocated_in_run or {}
         if "batch_id" in item:
             batch = (
                 db.query(InventoryBatch)
@@ -629,10 +681,17 @@ class InventoryService:
         if not batches:
             raise EntityNotFoundException("InventoryBatch", f"wh={warehouse_id}, prod={product_id}")
 
-        # Choose the first unexpired batch with available inventory, or first batch
+        # Choose the best unexpired batch with sufficient inventory (FEFO) after running allocations
         today = date.today()
+        req_qty = item.get("quantity", 1)
         for b in batches:
-            if (not b.expiry_date or b.expiry_date >= today) and b.available_quantity > 0:
+            rem = b.available_quantity - allocated.get(b.id, 0)
+            if (not b.expiry_date or b.expiry_date >= today) and rem >= req_qty:
+                return b
+
+        for b in batches:
+            rem = b.available_quantity - allocated.get(b.id, 0)
+            if (not b.expiry_date or b.expiry_date >= today) and rem > 0:
                 return b
 
         return batches[0]

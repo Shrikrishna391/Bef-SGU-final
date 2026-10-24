@@ -75,3 +75,24 @@ class OllamaStatusResponse(BaseModel):
     configured_model: str
     available_models: List[OllamaModelInfo]
     is_connected: bool
+
+
+class FMCGEngineRunRequest(BaseModel):
+    top_n_skus: int = Field(default=25, ge=1, le=100, description="Number of top SKUs to optimize")
+    num_stores: int = Field(default=15, ge=1, le=30, description="Number of retail stores to fulfill")
+    use_net_replenishment: bool = Field(default=True, description="Enable dynamic net replenishment and safety stock")
+    simulated_stock_seed: int = Field(default=42, description="Random seed for on-hand store stock simulation")
+    create_plan_record: bool = Field(default=True, description="Automatically persist candidate plan in authoritative database")
+
+
+class FMCGEngineRunResponse(BaseModel):
+    engine_status: str
+    plan_code: Optional[str] = None
+    plan_id: Optional[int] = None
+    module_1_inventory_dashboard: Dict[str, Any]
+    module_2_demand_prediction: Dict[str, Any]
+    module_3_distribution_recommendations: List[Dict[str, Any]]
+    module_4_optimization_dashboard: Dict[str, Any]
+    executive_dispatch_briefing: Optional[str] = None
+    key_feature_insights: Optional[List[Dict[str, Any]]] = None
+

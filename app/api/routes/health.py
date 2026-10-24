@@ -27,6 +27,7 @@ def health_check() -> Dict[str, Any]:
 
 
 @router.get("/health/ready")
+@router.get("/health/readiness")
 @router.get("/ready")
 def readiness_check(
     response: Response,

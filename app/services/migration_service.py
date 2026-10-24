@@ -443,3 +443,208 @@ class DataMigrationService:
             "legacy_source": legacy_data_source or "mongo_archive_preserved",
             "status": "MIGRATION_VERIFIED_SUCCESSFUL",
         }
+
+    @classmethod
+    def migrate_flipkart_catalog(cls, db: Session) -> Dict[str, Any]:
+        """
+        Idempotently migrates the Flipkart 100-SKU FMCG Network into the database:
+        - 3 Regional Warehouses (WH-01, WH-02, WH-03)
+        - 30 Retail Stores (STORE-001 through STORE-030)
+        - 100 Flipkart FMCG Products/SKUs
+        - 600 Inventory Batches with FEFO Expiry Dates
+        - 15 Delivery Agents / Vehicles
+        """
+        import pandas as pd
+        from models.data_loader import FlowGridDataLoader
+
+        logger.info("Migrating Flipkart 100-SKU FMCG catalog into database...")
+        loader = FlowGridDataLoader()
+        results: Dict[str, Any] = {
+            "warehouses_upserted": 0,
+            "stores_upserted": 0,
+            "products_upserted": 0,
+            "batches_upserted": 0,
+            "agents_upserted": 0,
+            "duplicates_prevented": 0,
+            "status": "COMPLETED",
+        }
+
+        # 1. Warehouses
+        wh_df = loader.load_warehouses()
+        wh_map: Dict[str, Warehouse] = {}
+        for _, row in wh_df.iterrows():
+            code = str(row["warehouse_id"]).strip()
+            name = str(row["warehouse_name"]).strip()
+            region = str(row.get("city", row.get("region", "Maharashtra"))).strip()
+            raw_cap = row.get("storage_capacity_kg", row.get("daily_dispatch_capacity_kg", 50000))
+            capacity = max(int(float(raw_cap)) * 5, 200000)
+            existing_wh = db.query(Warehouse).filter_by(code=code).first()
+            if existing_wh:
+                existing_wh.name = name
+                existing_wh.region = region
+                existing_wh.capacity_limit = capacity
+                wh_map[code] = existing_wh
+                results["duplicates_prevented"] += 1
+            else:
+                wh = Warehouse(
+                    code=code,
+                    name=name,
+                    region=region,
+                    capacity_limit=capacity,
+                    current_inventory_version=1,
+                    is_active=True,
+                )
+                db.add(wh)
+                wh_map[code] = wh
+                results["warehouses_upserted"] += 1
+        db.flush()
+
+        # 2. Stores / Retailers
+        stores_df = loader.load_stores()
+        for _, row in stores_df.iterrows():
+            code = str(row["store_id"]).strip()
+            name = str(row["store_name"]).strip()
+            region = str(row.get("service_zone", row.get("city", "Maharashtra"))).strip()
+            p_weight = int(row.get("priority_weight", 1))
+            st_type_raw = str(row.get("store_type", "REGIONAL_RETAIL")).upper()
+            st_type = StoreType.FLAGSHIP if ("FLAGSHIP" in st_type_raw or "SUPERMARKET" in st_type_raw) else StoreType.REGIONAL_RETAIL
+            existing_st = db.query(Store).filter_by(code=code).first()
+            if existing_st:
+                existing_st.name = name
+                existing_st.region = region
+                existing_st.priority_tier = p_weight
+                existing_st.store_type = st_type
+                results["duplicates_prevented"] += 1
+            else:
+                st = Store(
+                    code=code,
+                    name=name,
+                    region=region,
+                    priority_tier=p_weight,
+                    store_type=st_type,
+                    is_active=True,
+                )
+                db.add(st)
+                results["stores_upserted"] += 1
+        db.flush()
+
+        # 3. Products / 100 SKUs
+        skus_df = loader.load_skus()
+        prod_map: Dict[str, Product] = {}
+        for _, row in skus_df.iterrows():
+            sku = str(row["sku_id"]).strip()
+            name = str(row.get("product_name", sku)).strip()
+            cat = str(row.get("category_id", row.get("category", "General"))).strip()
+            shelf_life = int(row.get("estimated_total_shelf_life_days", row.get("shelf_life_days", 180)))
+            price = float(row.get("listing_price_inr", row.get("unit_price", 100.0)))
+            is_perishable = shelf_life < 90
+            existing_p = db.query(Product).filter_by(sku=sku).first()
+            if existing_p:
+                existing_p.name = name
+                existing_p.category = cat
+                existing_p.shelf_life_days = shelf_life
+                existing_p.unit_cost = price
+                existing_p.is_perishable = is_perishable
+                prod_map[sku] = existing_p
+                results["duplicates_prevented"] += 1
+            else:
+                p = Product(
+                    sku=sku,
+                    name=name,
+                    category=cat,
+                    shelf_life_days=shelf_life,
+                    unit_cost=price,
+                    is_perishable=is_perishable,
+                    is_active=True,
+                )
+                db.add(p)
+                prod_map[sku] = p
+                results["products_upserted"] += 1
+        db.flush()
+
+        # 4. Inventory Batches (600 batches with FEFO expiry)
+        batches_df = loader.load_inventory_batches(only_usable=True)
+        for _, row in batches_df.iterrows():
+            wh_code = str(row["warehouse_id"]).strip()
+            sku_code = str(row["sku_id"]).strip()
+            lot_no = str(row.get("lot_id", row.get("batch_id", "LOT-001"))).strip()
+            qty = int(row.get("quantity_on_hand", row.get("quantity_available", 100)))
+            mfg_raw = row.get("received_at", row.get("manufactured_date"))
+            exp_raw = row.get("expiry_date")
+
+            wh = wh_map.get(wh_code) or db.query(Warehouse).filter_by(code=wh_code).first()
+            prod = prod_map.get(sku_code) or db.query(Product).filter_by(sku=sku_code).first()
+            if not wh or not prod:
+                continue
+
+            mfg_date = pd.to_datetime(mfg_raw).date() if pd.notna(mfg_raw) else None
+            exp_date = pd.to_datetime(exp_raw).date() if pd.notna(exp_raw) else None
+
+            existing_b = db.query(InventoryBatch).filter_by(
+                warehouse_id=wh.id,
+                product_id=prod.id,
+                batch_number=lot_no,
+            ).first()
+            if existing_b:
+                existing_b.on_hand_quantity = qty
+                existing_b.reserved_quantity = 0
+                existing_b.committed_quantity = 0
+                existing_b.expiry_date = exp_date
+                existing_b.manufactured_date = mfg_date
+                results["duplicates_prevented"] += 1
+            else:
+                batch = InventoryBatch(
+                    warehouse_id=wh.id,
+                    product_id=prod.id,
+                    batch_number=lot_no,
+                    on_hand_quantity=qty,
+                    reserved_quantity=0,
+                    committed_quantity=0,
+                    manufactured_date=mfg_date,
+                    expiry_date=exp_date,
+                    version=1,
+                )
+                db.add(batch)
+                results["batches_upserted"] += 1
+
+        db.commit()
+
+        # 5. Delivery Agents
+        try:
+            agents_path = loader.get_path("agents.csv")
+            if agents_path.exists():
+                agents_df = pd.read_csv(agents_path)
+                from app.models.agent import DeliveryAgent
+                from app.models.enums import AgentAvailabilityStatus, AgentShiftStatus, VehicleType
+                for _, row in agents_df.iterrows():
+                    code = str(row["agent_id"]).strip()
+                    name = str(row.get("name", f"Delivery Agent {code}")).strip()
+                    existing_ag = db.query(DeliveryAgent).filter_by(code=code).first()
+                    if not existing_ag:
+                        agent = DeliveryAgent(
+                            code=code,
+                            name=name,
+                            phone="+91-9876543210",
+                            vehicle_type=VehicleType.TRUCK,
+                            capacity_kg=2000.0,
+                            capacity_volume_cbm=12.0,
+                            availability_status=AgentAvailabilityStatus.AVAILABLE,
+                            shift_status=AgentShiftStatus.ON_SHIFT,
+                            is_active=True,
+                        )
+                        db.add(agent)
+                        results["agents_upserted"] += 1
+                db.commit()
+        except Exception as e:
+            logger.warning("Could not seed delivery agents: %s", e)
+
+        logger.info(
+            "Flipkart catalog migration finished: %d WH, %d Stores, %d SKUs, %d Batches",
+            results["warehouses_upserted"],
+            results["stores_upserted"],
+            results["products_upserted"],
+            results["batches_upserted"],
+        )
+        return results
+
+

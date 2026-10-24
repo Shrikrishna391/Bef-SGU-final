@@ -259,14 +259,25 @@ class ScenarioMigrationRequest(BaseModel):
         "Atomically increments batch version and warehouse inventory version."
     )
 )
+@router.post(
+    "/batches/{batch_id}/adjust",
+    response_model=InventoryBatchRead,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 def adjust_batch_inventory(
     payload: InventoryBatchAdjust,
+    batch_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: AuthenticatedUser = Depends(require_roles(PLANNER_ROLES)),
 ) -> InventoryBatchRead:
+    target_id = batch_id or payload.batch_id
+    if not target_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="batch_id must be provided in URL path or request body")
     batch = InventoryService.adjust_batch_inventory(
         db=db,
-        batch_id=payload.batch_id,
+        batch_id=target_id,
         quantity_delta=payload.quantity_delta,
         reason=payload.reason,
         user_id=current_user.id,
@@ -413,4 +424,18 @@ def execute_safe_inventory_migration(
 ) -> Dict[str, Any]:
     code = payload.scenario_code if payload else "SCENARIO-SURGE-001"
     return DataMigrationService.execute_safe_migration(db=db, scenario_code=code)
+
+
+@router.post(
+    "/seed-flipkart",
+    status_code=status.HTTP_200_OK,
+    summary="Migrate complete Flipkart 100-SKU network into database",
+    description="Loads 3 warehouses, 30 stores, 100 FMCG SKUs, 600 FEFO inventory batches, and delivery agents into authoritative database."
+)
+def seed_flipkart_network_data(
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(require_roles(PLANNER_ROLES)),
+) -> Dict[str, Any]:
+    return DataMigrationService.migrate_flipkart_catalog(db=db)
+
 

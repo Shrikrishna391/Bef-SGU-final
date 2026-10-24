@@ -88,6 +88,16 @@ class FlowGridDataLoader:
         """Loads historical daily sales used by the seven-day quantile forecaster."""
         path = self.get_path("synthetic_sales_daily.csv")
         if not path.exists():
+            for alt in [
+                Path("unused_data/synthetic_sales_daily.csv"),
+                self.base_dir.parent / "templates" / "sales_daily.csv",
+                self.base_dir / "sales_daily.csv",
+                Path("flowgrid_flipkart_100sku/templates/sales_daily.csv"),
+            ]:
+                if alt.exists():
+                    path = alt
+                    break
+        if not path.exists():
             raise FileNotFoundError(f"Sales history file not found at {path}")
         wanted = {"date", "store_id", "sku_id", "units_sold", "closing_stock"}
         return pd.read_csv(path, usecols=lambda col: col in wanted)

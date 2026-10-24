@@ -40,7 +40,7 @@ class InventoryBatchRead(BaseModel):
 
 class InventoryBatchAdjust(BaseModel):
     """Payload to adjust inventory on an existing batch with concurrency protection."""
-    batch_id: int = Field(..., gt=0, examples=[1])
+    batch_id: Optional[int] = Field(default=None, gt=0, examples=[1])
     quantity_delta: int = Field(..., examples=[50], description="Positive to add stock, negative to reduce")
     reason: str = Field(..., min_length=3, max_length=255, examples=["Physical count reconciliation"])
 
