@@ -2,12 +2,22 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@font-face {
+  font-family: 'Parmyo';
+  src: url('/fonts/Parmyo.otf') format('opentype'),
+       url('./assets/Parmyo.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --font-parmyo: 'Parmyo', var(--font-sans);
   }
 
   body {
@@ -16,6 +26,7 @@
     color: #f8fafc;
     overflow-x: hidden;
   }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -58,8 +69,14 @@
   background: rgba(99, 102, 241, 0.6);
 }
 
+.font-parmyo {
+  font-family: 'Parmyo', var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
 /* Glassmorphism utilities */
 .glass-panel {
+
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -95,6 +112,101 @@
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   DAY & NIGHT THEME SYSTEM
+   Day mode: White, Cream Navy background, Navy Blue buttons, Multi-colored fonts
+   Night mode: Cosmic Slate-950, deep navy glass panels, neon glows
+   ========================================================================== */
+
+/* Day Mode Variables & Overrides */
+.theme-day {
+  --bg-main: #f8f6f0; /* Warm cream */
+  --bg-cream-navy: #fbf9f4;
+  --bg-card: #ffffff;
+  --border-card: #e2e8f0;
+  --text-primary: #0a192f;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  color: #0a192f;
+  background-color: #f8f6f0;
+}
+
+.theme-day .glass-panel {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(10, 25, 47, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  color: #0f172a;
+}
+
+.theme-day .glass-panel-hover:hover {
+  background: #fdfcf9 !important;
+  border-color: #0a192f !important;
+  box-shadow: 0 10px 25px -4px rgba(10, 25, 47, 0.12) !important;
+}
+
+/* Navy Blue Button Class (Required for Day mode buttons) */
+.btn-navy {
+  background-color: #0a192f !important;
+  color: #ffffff !important;
+  border: 1px solid #1e3a5f !important;
+  box-shadow: 0 4px 14px 0 rgba(10, 25, 47, 0.3) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-navy:hover {
+  background-color: #112240 !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 6px 20px 0 rgba(10, 25, 47, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+.btn-navy:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+/* Multi-colored Fonts for Sub-headlines & Issues */
+.font-multicolor-subhead {
+  background: linear-gradient(135deg, #1d4ed8 0%, #4f46e5 28%, #0d9488 65%, #0284c7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+}
+
+.font-multicolor-subhead-night {
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 35%, #2dd4bf 70%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+}
+
+/* Multi-colored issue fonts */
+.font-issue-critical {
+  color: #e11d48 !important;
+  font-weight: 700;
+}
+
+.font-issue-warning {
+  color: #d97706 !important;
+  font-weight: 700;
+}
+
+.font-issue-opportunity {
+  color: #059669 !important;
+  font-weight: 700;
+}
+
+.font-issue-constraint {
+  color: #7c3aed !important;
+  font-weight: 700;
+}
+
+.font-issue-telematics {
+  color: #0284c7 !important;
+  font-weight: 700;
 }
 
 @theme inline {

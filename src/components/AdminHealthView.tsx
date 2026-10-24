@@ -21,7 +21,6 @@ export const AdminHealthView: React.FC = () => {
   const [jobs, setJobs] = useState<ScheduledJob[]>(INITIAL_SCHEDULED_JOBS);
   const [alerts, setAlerts] = useState<SystemAlert[]>(INITIAL_ALERTS);
   const [decisionServiceStatus, setDecisionServiceStatus] = useState<'HEALTHY' | 'DEGRADED' | 'DOWN'>('HEALTHY');
-  const [latencyMs, setLatencyMs] = useState<number>(70);
   const [backendHealth, setBackendHealth] = useState<BackendHealthStatus | null>(null);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaHealthStatus | null>(null);
   const [isSeeding, setIsSeeding] = useState<boolean>(false);
@@ -40,7 +39,6 @@ export const AdminHealthView: React.FC = () => {
       setOllamaStatus(o);
       if (h.isOnline) {
         setDecisionServiceStatus('HEALTHY');
-        setLatencyMs(45);
       }
     };
     fetchStatus();
@@ -66,7 +64,6 @@ export const AdminHealthView: React.FC = () => {
 
   const handleSimulateOutage = () => {
     setDecisionServiceStatus('DOWN');
-    setLatencyMs(5000);
 
     const outageAlert: SystemAlert = {
       id: `ALT-${Date.now().toString().slice(-4)}`,
@@ -84,7 +81,6 @@ export const AdminHealthView: React.FC = () => {
 
   const handleRestoreService = () => {
     setDecisionServiceStatus('HEALTHY');
-    setLatencyMs(70);
     setAlerts(prev => prev.map(a => a.rule === 'DECISION_SERVICE_DOWN' ? { ...a, active: false } : a));
   };
 
@@ -116,7 +112,7 @@ export const AdminHealthView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time decision service latency • node-cron scheduler telemetry • T22 fault injection &amp; SLA compliance
+            Backend readiness probe and local fault-injection controls. Latency is shown only when returned by the API.
           </p>
         </div>
 
@@ -171,11 +167,14 @@ export const AdminHealthView: React.FC = () => {
             <span className={`w-2.5 h-2.5 rounded-full ${backendHealth?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-500'}`} />
           </div>
           <div className="text-2xl font-black text-white">
-            {backendHealth?.isOnline ? 'ONLINE' : decisionServiceStatus}
+            {backendHealth ? (backendHealth.isOnline ? 'API CONNECTED' : 'API UNAVAILABLE') : 'CHECKING API'}
           </div>
           <p className="text-[11px] text-slate-400">
-            FMCG Engine + SQLite DB • Latency: <strong className="text-emerald-400">{latencyMs}ms</strong>
+            {backendHealth
+              ? `${backendHealth.status} | ${backendHealth.database}${backendHealth.latencyMs !== undefined ? ` | RTT ${backendHealth.latencyMs}ms` : ''}`
+              : 'Waiting for /health/readiness response.'}
           </p>
+          <p className="text-[10px] text-slate-500">Fault-injection controls below simulate UI state; they do not alter the backend.</p>
         </div>
 
         <div className="glass-panel p-5 rounded-xl border-slate-800 space-y-2">
@@ -198,15 +197,15 @@ export const AdminHealthView: React.FC = () => {
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5 font-semibold">
               <Server className="w-4 h-4 text-emerald-400" />
-              <span>SQLite &amp; Vector Store</span>
+              <span>Database health</span>
             </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            <span className={`w-2.5 h-2.5 rounded-full ${backendHealth?.isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`} />
           </div>
           <div className="text-2xl font-black text-white">
-            CONNECTED
+            {backendHealth?.isOnline ? backendHealth.database : 'NOT VERIFIED'}
           </div>
           <p className="text-[11px] text-slate-400">
-            SQLite (Alembic Head) + FAISS Index (100 SKUs)
+            {backendHealth?.isOnline ? 'Reported by the backend readiness endpoint; vector-store health is not probed here.' : 'Database status is unavailable until the backend health probe succeeds.'}
           </p>
         </div>
 
@@ -222,7 +221,7 @@ export const AdminHealthView: React.FC = () => {
             {alerts.filter(a => a.active).length} ALERT(S)
           </div>
           <p className="text-[11px] text-slate-400">
-            Evaluated every 30s by scheduler (NFR-15, Section 9.6)
+            Seeded demo alerts; scheduler status is not connected to this list.
           </p>
         </div>
       </div>

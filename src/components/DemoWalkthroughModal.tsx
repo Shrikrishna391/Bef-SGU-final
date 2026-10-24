@@ -54,7 +54,7 @@ export const DemoWalkthroughModal: React.FC<DemoWalkthroughModalProps> = ({
     {
       step: 3,
       title: 'Generate Plan & Inspect Explainable AI Reason Card (FR-09, FR-10, J3)',
-      desc: 'Marginal-value allocation completes in <1ms with zero constraint violations. Open any line reason card to inspect marginal value tiers, arrival shelf-life (≥70%), and lateness-aware sourcing.',
+      desc: 'Review the generated allocation and open a reason card to inspect forecast demand, available stock, arrival shelf-life, and the alternative warehouse comparison.',
       tab: 'plans' as ActiveTab,
       actionLabel: 'Generate & Explain Plan',
       action: () => {
@@ -87,7 +87,7 @@ export const DemoWalkthroughModal: React.FC<DemoWalkthroughModalProps> = ({
     {
       step: 6,
       title: 'Benchmark Against Current Practice & Strong Baseline (FR-13, J6)',
-      desc: `Compare side-by-side results on hidden true demand across 20 simulation seeds: ${BENCHMARK_COMPARISONS.stockoutReductionVsCurrentPct}% stockouts, ${BENCHMARK_COMPARISONS.wasteReductionVsCurrentPct}% expiry waste, and ${BENCHMARK_COMPARISONS.lostMarginReductionVsCurrentPct}% lost margin reduction.`,
+      desc: `Compare policies on the included synthetic benchmark: ${BENCHMARK_COMPARISONS.stockoutReductionVsCurrentPct}% stockouts and ${BENCHMARK_COMPARISONS.wasteReductionVsCurrentPct}% expiry waste versus the current-practice simulation. These are simulated results, not production guarantees.`,
       tab: 'benchmark' as ActiveTab,
       actionLabel: 'View Impact Benchmark',
       action: () => onNavigateTab('benchmark'),

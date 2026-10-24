@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       label: 'DATA & OBSERVABILITY',
       items: [
         { id: 'import' as ActiveTab, label: 'Data Import Studio', icon: UploadCloud, badge: '5% Rule' },
-        { id: 'health' as ActiveTab, label: 'System Health & Alerts', icon: Activity, badge: 'Live' },
+        { id: 'health' as ActiveTab, label: 'System Health & Alerts', icon: Activity, badge: 'API' },
       ],
     },
   ];
@@ -187,19 +187,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
                 : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
             }`}
-            title="Click to toggle simulated online/offline connectivity"
+            title="Toggle the simulated local event-processing mode; this does not change the backend connection."
           >
             {isOnline ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <Wifi className="w-3.5 h-3.5" />
-                <span>Online</span>
+                <span>Demo online</span>
               </>
             ) : (
               <>
                 <span className="w-2 h-2 rounded-full bg-amber-400"></span>
                 <WifiOff className="w-3.5 h-3.5" />
-                <span>Offline</span>
+                <span>Demo offline</span>
               </>
             )}
           </button>
@@ -208,14 +208,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onTriggerSync}
               className="flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-1 rounded-lg border border-amber-500/30 transition-all"
-              title="Click to force sync offline queue"
+              title="Process queued events in the local demo queue"
             >
               <span>{queuedEventCount} queued</span>
-              <span className="underline ml-0.5">Sync</span>
+              <span className="underline ml-0.5">Process</span>
             </button>
           ) : (
             <span className="text-[10px] text-slate-500 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500/70" /> Synced
+              <CheckCircle2 className="w-3 h-3 text-emerald-500/70" /> Queue empty
             </span>
           )}
         </div>
@@ -318,6 +318,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Online status indicator */}
           <button
             onClick={() => setIsOnline(!isOnline)}
+            aria-label={isOnline ? 'Demo network mode is online' : 'Demo network mode is offline'}
+            title="Toggle simulated local event processing"
             className={`p-1.5 rounded-lg border text-xs ${
               isOnline
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'

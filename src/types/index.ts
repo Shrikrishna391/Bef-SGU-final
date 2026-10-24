@@ -184,13 +184,13 @@ export interface PlanRun {
   status: PlanStatus;
   snapshotHash: string;
   solverStatus: SolverStatus;
-  solveSeconds: number;
+  solveSeconds?: number;
   totalCases: number;
   totalFreightRupees: number;
-  expectedMarginRupees: number;
+  expectedMarginRupees?: number;
   lines: AllocationLine[];
   unmet: UnmetDemand[];
-  baselineScores: ComparisonMetrics;
+  baselineScores?: ComparisonMetrics;
   staleLocations: string[];
   executiveDispatchBriefing?: string;
   keyFeatureInsights?: Array<Record<string, any>>;
@@ -245,3 +245,75 @@ export interface ScheduledJob {
   status: 'SUCCESS' | 'RUNNING' | 'FAILED' | 'OVERDUE';
   description: string;
 }
+
+export type ThemeMode = 'night' | 'day';
+
+export type AddressClassification =
+  | 'NARROW_LANE'       // Dense Old Peths / Narrow Wadas (<2.5m)
+  | 'GHAT_TERRAIN'      // Mountain Incline & Hairpin curves
+  | 'HIGHWAY_CORRIDOR'  // Industrial Corridor & Dock Unloading
+  | 'APMC_MARKET'       // Wholesale Mandi Yard (Early morning window)
+  | 'PERI_URBAN'        // Semi-Rural / Landmark navigation
+  | 'COMMERCIAL_AVENUE'; // Main market street
+
+export type DeliveryOrderStatus = 'PENDING' | 'ASSIGNED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED' | 'FLAGGED';
+
+export interface DeliveryIssue {
+  id: string;
+  type: 'WIDTH_LIMIT' | 'WINDOW_CONFLICT' | 'DIALECT_GAP' | 'SHELF_LIFE' | 'TERRAIN_RISK';
+  severity: 'CRITICAL' | 'WARNING' | 'OPPORTUNITY';
+  title: string;
+  description: string;
+  recommendedAction: string;
+}
+
+export interface ClientDeliveryOrder {
+  id: string;
+  retailerId: string;
+  clientName: string;
+  city: string;
+  zone: string;
+  detailedAddress: string;
+  addressClassification: AddressClassification;
+  laneWidthMeters: number;
+  unloadingWindow: string;
+  localLandmark: string;
+  localDialect: string;
+  skuSummary: string;
+  totalCases: number;
+  totalWeightKg: number;
+  perishable: boolean;
+  priority: 'HIGH' | 'MEDIUM' | 'STANDARD';
+  assignedDriverId: string | null;
+  nativeMatchScore: number;
+  status: DeliveryOrderStatus;
+  issues: DeliveryIssue[];
+  estimatedDeliveryMinutes: number;
+}
+
+export interface NativeDriver {
+  id: string;
+  name: string;
+  phone: string;
+  nativeCity: string;
+  homeTerritory: string;
+  localityFluencyScore: number; // 0-100
+  dialect: string;
+  vehicleName: string;
+  vehicleType: '3_WHEELER' | 'TATA_ACE' | 'BOLERO_PICKUP' | 'EICHER_14FT' | 'EV_CARGO';
+  vehicleWidthMeters: number;
+  maxPayloadCases: number;
+  currentPayloadCases: number;
+  currentLocation: string;
+  status: 'AVAILABLE' | 'ON_ROUTE' | 'LOADING' | 'RETURNING';
+  rating: number;
+  completedTrips: number;
+  specialties: string[];
+  reverseRouteOpportunity?: {
+    returnFrom: string;
+    returnTo: string;
+    availableCapacityCases: number;
+    potentialSavingsRupees: number;
+  };
+}
+

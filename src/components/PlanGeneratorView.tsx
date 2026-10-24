@@ -303,7 +303,9 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
                     : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                 }`}
               >
-                {planRun.solverStatus} ({planRun.solveSeconds}s solver wall time)
+                {planRun.solverStatus}{planRun.solveSeconds !== undefined
+                  ? ` · ${(planRun.solveSeconds * 1000).toFixed(2)} ms local decision calculation`
+                  : ' · timing not reported by API'}
               </span>
             )}
           </div>

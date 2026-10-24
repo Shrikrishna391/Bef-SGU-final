@@ -105,14 +105,14 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
   const handleSaleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onRecordSale(selectedSaleSku, unitsSoldInput);
-    setSaleSuccessMessage(`Recorded sale of ${unitsSoldInput} units. ${isOnline ? 'Synced live.' : 'Saved offline to event queue.'}`);
+    setSaleSuccessMessage(`Recorded sale of ${unitsSoldInput} units. ${isOnline ? 'Applied to the local demo log.' : 'Queued locally in offline demo mode.'}`);
     setTimeout(() => setSaleSuccessMessage(''), 3500);
   };
 
   const handleCountSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onRecordStockCount(selectedCountSku, countInput);
-    setCountSuccessMessage(`Recorded physical count of ${countInput} units. ${isOnline ? 'Snapshot updated.' : 'Queued offline.'}`);
+    setCountSuccessMessage(`Recorded physical count of ${countInput} units. ${isOnline ? 'Local demo snapshot updated.' : 'Queued locally in offline demo mode.'}`);
     setTimeout(() => setCountSuccessMessage(''), 3500);
   };
 
@@ -192,12 +192,12 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
           )}
           <div className="text-xs">
             <p className="font-bold">
-              {isOnline ? 'Online: Direct Live Sync to Express Server' : 'Offline Mode: Kirana Connectivity Lost'}
+              {isOnline ? 'Demo online: local event processing' : 'Demo offline: event queue enabled'}
             </p>
             <p className="text-slate-300 text-[11px] mt-0.5">
               {isOnline
-                ? 'All field records sync immediately with unique UUIDs and optimistic lock validation.'
-                : 'Transactions stored safely in offline event queue. Will auto-sync once connection returns.'}
+                ? 'This toggle simulates online event handling in the local demo; it does not confirm a server sync.'
+                : 'Transactions are queued in this browser demo. Reconnecting processes the local queue only.'}
             </p>
           </div>
         </div>

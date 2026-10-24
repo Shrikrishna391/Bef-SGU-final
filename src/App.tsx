@@ -3,7 +3,6 @@ import {
   Navbar,
   ActiveTab
 } from './components/Navbar';
-import { HeroBanner } from './components/HeroBanner';
 import { PlanGeneratorView } from './components/PlanGeneratorView';
 import { ForecastReviewView } from './components/ForecastReviewView';
 import { BaselineComparisonView } from './components/BaselineComparisonView';
@@ -47,6 +46,7 @@ import {
   processEventQueue
 } from './services/offlineSyncService';
 import { FlowGridAPI, BackendHealthStatus, setActiveUserRole } from './services/api';
+import { PLAN_HORIZON_DAYS, SYNTHETIC_SALES_PANEL } from './data/demoScope';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('plans');
@@ -228,47 +228,18 @@ export const App: React.FC = () => {
           };
         });
 
-        const impact = result.module_4_optimization_dashboard || {};
-        const beforeOpt = impact.before_optimization || {};
-        const afterOpt = impact.after_ai_optimization || {};
-
         const newPlan: PlanRun = {
           id: result.plan_code || `PLAN-AI-${Date.now().toString().slice(-6)}`,
           createdAt: new Date().toISOString(),
           createdBy: 'Rohit Sharma (Supply Chain Planner)',
           cycleStart: new Date().toISOString().split('T')[0],
           status: 'PROVISIONAL',
-          snapshotHash: 'SHA256:FLIPKART-NETWORK-OPTIMAL',
-          solverStatus: 'OPTIMAL',
-          solveSeconds: 0.82,
+          snapshotHash: 'not-provided-by-api',
+          solverStatus: 'FEASIBLE',
           totalCases,
           totalFreightRupees: totalFreight,
-          expectedMarginRupees: totalCases * 12 * 28,
           lines,
           unmet: [],
-          baselineScores: {
-            currentPractice: {
-              stockoutUnits: Math.round(beforeOpt.stockout_risk_pct ? beforeOpt.stockout_risk_pct * 10 : 340),
-              fillRatePct: 78.4,
-              expiredUnits: 48,
-              freightRupees: Math.round(beforeOpt.estimated_transport_cost_inr || totalFreight * 1.35),
-              lostMarginRupees: 18500,
-            },
-            strongBaseline: {
-              stockoutUnits: 180,
-              fillRatePct: 88.2,
-              expiredUnits: 24,
-              freightRupees: Math.round(totalFreight * 1.15),
-              lostMarginRupees: 8900,
-            },
-            hetvaya: {
-              stockoutUnits: Math.round(afterOpt.stockout_risk_pct ? afterOpt.stockout_risk_pct * 10 : 15),
-              fillRatePct: 98.8,
-              expiredUnits: 2,
-              freightRupees: Math.round(afterOpt.optimized_transport_cost_inr || totalFreight),
-              lostMarginRupees: 950,
-            },
-          },
           staleLocations: [],
           executiveDispatchBriefing: result.executive_dispatch_briefing,
           keyFeatureInsights: result.key_feature_insights,
@@ -545,8 +516,8 @@ export const App: React.FC = () => {
       {/* Main Content Column */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen overflow-x-hidden">
         {/* Top Context Sub-Bar (Desktop) */}
-        <div className="hidden lg:flex items-center justify-between px-6 py-2.5 bg-slate-900/40 border-b border-slate-800/80 text-xs text-slate-400">
-          <div className="flex items-center gap-3">
+        <div className="hidden lg:flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-6 py-2.5 bg-slate-900/40 border-b border-slate-800/80 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="font-semibold text-slate-200 capitalize">
               {activeTab === 'plans' ? 'Allocation Plan & AI Engine' :
                activeTab === 'forecast' ? 'Demand Forecasting Intelligence' :
@@ -558,26 +529,20 @@ export const App: React.FC = () => {
                'System Health & Monitoring'}
             </span>
             <span className="text-slate-600">•</span>
-            <span className="text-slate-400">Weekly Cycle W43 (Oct 2026)</span>
+            <span className="text-slate-400">{PLAN_HORIZON_DAYS}-day planning horizon</span>
             <span className="text-slate-600">•</span>
-            <span className="text-indigo-400 font-mono text-[11px]">Network: Maharashtra (Pune Hub, Satara, Kolhapur)</span>
+            <span className="text-indigo-300 font-mono text-[11px]">Forecast panel: {SYNTHETIC_SALES_PANEL.storeCount} synthetic stores · {SYNTHETIC_SALES_PANEL.skuCount} SKUs</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="text-slate-400">Avg Kirana Margin: <strong className="text-emerald-400">3–5%</strong></span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400">Solve Time: <strong className="text-indigo-300">{planRun?.solveSeconds ? `${(planRun.solveSeconds * 1000).toFixed(2)}ms` : '<1ms'}</strong></span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            <span className="text-slate-400">Workspace records: <strong className="text-slate-200">{retailers.length} retailers / {products.length} SKUs / {warehouses.length} warehouses</strong></span>
+            <span className="text-slate-600">|</span>
+            <span className="text-amber-300">Synthetic demo inputs</span>
           </div>
         </div>
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-          {/* Hero Context Banner */}
-          <HeroBanner
-            onQuickGenerate={() => handleGeneratePlan(false)}
-            planStatus={planRun?.solverStatus || 'FEASIBLE'}
-          />
-
           {/* View Switcher based on Active Tab */}
           {activeTab === 'plans' && (
             <PlanGeneratorView
@@ -654,6 +619,9 @@ export const App: React.FC = () => {
             <p className="text-[11px] text-slate-600">
               Greedy Marginal Allocation • Scikit-learn Quantile ML • React 19 • Offline Resilient Event Queue
             </p>
+            <a href="/" className="text-indigo-300 hover:text-white transition-colors">
+              Landing page
+            </a>
           </div>
         </footer>
       </div>
