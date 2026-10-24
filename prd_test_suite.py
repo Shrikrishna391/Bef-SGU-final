@@ -65,6 +65,16 @@ class PRDTestSuite:
         prd_ref = "PRD Sec. 6.1 FR-P0-01 & Sec. 13.1"
         
         if not os.path.exists(self.data_path):
+            for candidate in [
+                "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv",
+                "unused_data/synthetic_sales_daily.csv",
+                "../flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
+            ]:
+                if os.path.exists(candidate):
+                    self.data_path = candidate
+                    break
+
+        if not os.path.exists(self.data_path):
             self._record_result("FR-P0-01", title, prd_ref, False, {"error": f"File {self.data_path} missing"})
             return False
 

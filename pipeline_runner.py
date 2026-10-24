@@ -30,6 +30,16 @@ def run_full_pipeline(csv_path: str = "synthetic_sales_daily.csv", output_dir: s
     os.makedirs(output_dir, exist_ok=True)
 
     # 1. Load Data
+    if not os.path.exists(csv_path):
+        for candidate in [
+            "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv",
+            "unused_data/synthetic_sales_daily.csv",
+            "../flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
+        ]:
+            if os.path.exists(candidate):
+                csv_path = candidate
+                break
+
     print(f"\n[1/6] Loading Daily Sales Dataset: {csv_path}...")
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"Dataset {csv_path} not found.")

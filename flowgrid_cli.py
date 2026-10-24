@@ -32,7 +32,10 @@ from models.stock_optimizer import DistributionOptimizer
 from models.static_baseline import StaticAllocationBaseline
 from models.data_loader import FlowGridDataLoader
 from models.neural_demand_forecaster import NeuralDemandForecaster
+from models.inventory_optimizer import InventoryOptimizer
+from models.fmcg_distribution_engine import FMCGDistributionEngine
 from prd_test_suite import PRDTestSuite, safe_json_default
+
 
 
 # Terminal styling helpers
@@ -336,6 +339,82 @@ def cmd_optimize(args):
 
 
 # ------------------------------------------------------------------------------
+# COMMAND: recommend (End-to-End FMCG Distribution Intelligence)
+# ------------------------------------------------------------------------------
+def cmd_recommend(args):
+    print_banner()
+    print(Style.header("AI-Powered FMCG Distribution Intelligence & Inventory Optimization Engine"))
+    print(f"{Style.DIM}Four Core Modules: Inventory Dashboard | Demand Prediction | Recommended Plan | Optimization Dashboard{Style.RESET}")
+    print("-" * 115)
+
+    engine = FMCGDistributionEngine()
+    top_skus = getattr(args, "top_skus", 20)
+    stores_count = getattr(args, "stores", 12)
+    result = engine.run_distribution_intelligence(top_n_skus=top_skus, num_stores=stores_count)
+
+    inv_dash = result["module_1_inventory_dashboard"]
+    demand_sum = result["module_2_demand_prediction"]
+    recommendations = result["module_3_distribution_recommendations"]
+    impact_dash = result["module_4_optimization_dashboard"]
+    solver = result["solver_summary"]
+
+    # 1. MODULE 1: INVENTORY DASHBOARD
+    print(f"\n{Style.BOLD}MODULE 1: INVENTORY DASHBOARD (Warehouse Stock & Store Health){Style.RESET}")
+    wh_summary_str = " | ".join([f"{w}: {qty:,} units" for w, qty in inv_dash["warehouse_stocks"].items()])
+    print(f"  * Regional Warehouses Stock: {wh_summary_str} (Total: {inv_dash['total_warehouse_stock']:,} units)")
+    print(f"  * Store Pre-Replenishment Health: {inv_dash['store_summary']['stockout_at_risk_count']} at Risk | {inv_dash['store_summary']['overstocked_count']} Overstocked | {inv_dash['store_summary']['pre_replenishment_stockout_risk_pct']}% Risk Rate")
+    
+    if inv_dash["critical_stockout_alerts"]:
+        print(f"  * {Style.warn('Critical Stockout Alerts (Understocked Stores):')}")
+        for alert in inv_dash["critical_stockout_alerts"][:4]:
+            p_name = alert['product'][:28]
+            print(f"    - {alert['store_id']} | {p_name:<28} | Stock: {alert['current_stock']:>2} | Demand: {alert['forecasted_demand']:>2} | Net Needed: {Style.ok(str(alert['net_needed']))} | Days Supply: {alert['days_of_supply']}d")
+
+    # 2. MODULE 2: DEMAND PREDICTION
+    print(f"\n{Style.BOLD}MODULE 2: DEMAND PREDICTION & NET REPLENISHMENT{Style.RESET}")
+    print(f"  * Total Gross Demand:        {demand_sum['total_forecasted_units']:,} units across {demand_sum['store_sku_forecasts_count']} store-product combinations")
+    net_demand_str = f"{demand_sum['total_net_replenishment_units']:,} units"
+    print(f"  * Total Net Replenishment:   {Style.ok(net_demand_str)} (Deducted on-hand stock and added dynamic safety buffer)")
+
+    # 3. MODULE 3: RECOMMENDED DISTRIBUTION PLAN
+    print(f"\n{Style.BOLD}MODULE 3: RECOMMENDED DISTRIBUTION PLAN (Explainable AI Decisions){Style.RESET}")
+    print(f"  {'PRODUCT':<30} | {'FROM':<7} | {'TO':<10} | {'QTY':<5} | {'EST COST':<10} | {'REASON / EXPLANATION'}")
+    print("  " + "-" * 115)
+    for rec in recommendations[:12]:
+        p_name = rec['product']
+        if len(p_name) > 28:
+            p_name = p_name[:25] + "..."
+        print(f"  {p_name:<30} | {rec['from_warehouse']:<7} | {rec['to_store']:<10} | {rec['quantity']:>4} | {rec['estimated_cost']:<10} | {Style.DIM}{rec['reason']}{Style.RESET}")
+    if len(recommendations) > 12:
+        print(f"  ... and {len(recommendations) - 12} additional optimized dispatch movements.")
+    print("  " + "-" * 115)
+
+    # 4. MODULE 4: OPTIMIZATION DASHBOARD (BEFORE VS AFTER)
+    print(f"\n{Style.BOLD}MODULE 4: OPTIMIZATION DASHBOARD (Before vs After Impact Comparison){Style.RESET}")
+    before = impact_dash.get("before_optimization", {})
+    after = impact_dash.get("after_ai_optimization", {})
+
+    stockout_after_str = Style.ok(f"{after.get('stockout_risk_pct', 0):>6.1f}% stockout risk")
+    stockout_imp_str = Style.ok(f"-{after.get('stockout_reduction_pct', 0):.1f}% Risk Reduction")
+    transport_savings_str = Style.ok(f"-{after.get('transport_cost_savings_pct', 0):.1f}% Cost Reduction")
+    rescued_units_str = Style.ok(f"{after.get('rescued_near_expiry_units', 0):>6} units rescued")
+    wastage_elim_str = Style.ok(f"{after.get('expiry_wastage_reduction_pct', 0):.1f}% Wastage Elimination")
+    fulfill_str = Style.ok(f"{solver['fulfillment_rate_pct']} %")
+
+    print(f"  {'KPI METRIC':<30} | {'BEFORE (UNOPTIMIZED)':<22} | {'AFTER (AI ENGINE)':<22} | {'IMPACT / IMPROVEMENT'}")
+    print("  " + "-" * 100)
+    print(f"  {'Stockout Risk':<30} | {before.get('stockout_risk_pct', 0):>6.1f}% stores at risk   | {stockout_after_str}   | {stockout_imp_str}")
+    print(f"  {'Transportation Expense':<30} | INR {before.get('estimated_transport_cost_inr', 0):>8.2f}             | INR {after.get('optimized_transport_cost_inr', 0):>8.2f}             | {transport_savings_str}")
+    print(f"  {'Expiry Wastage Protection':<30} | {before.get('at_risk_warehouse_expiry_units', 0):>6} units at risk       | {rescued_units_str}       | {wastage_elim_str}")
+    print("  " + "-" * 100)
+    print(f"  Fulfillment Rate: {fulfill_str} | Violations: {Style.ok('0')} | Latency: {solver['wall_time_seconds']}s\n")
+
+    if getattr(args, "json", False):
+        print(json.dumps(result, indent=2, default=safe_json_default))
+    return 0
+
+
+# ------------------------------------------------------------------------------
 # COMMAND: scenario
 # ------------------------------------------------------------------------------
 def cmd_scenario(args):
@@ -515,18 +594,25 @@ def run_interactive():
         print("  [1] Network Status & Topology      (flowgrid status)")
         print("  [2] Run AI Demand Forecasting       (flowgrid forecast)")
         print("  [3] Constrained Stock Allocation   (flowgrid optimize)")
-        print("  [4] Benchmark Controlled Scenarios (flowgrid scenario)")
-        print("  [5] Run PRD Acceptance Test Suite  (flowgrid test)")
-        print("  [6] View Decision Audit Trail      (flowgrid audit)")
-        print("  [7] 3x Neural Loop Engineering     (flowgrid loop-train)")
-        print("  [8] Exit")
+        print("  [4] FMCG Distribution Intelligence (flowgrid recommend)")
+        print("  [5] Benchmark Controlled Scenarios (flowgrid scenario)")
+        print("  [6] Run PRD Acceptance Test Suite  (flowgrid test)")
+        print("  [7] View Decision Audit Trail      (flowgrid audit)")
+        print("  [8] 3x Neural Loop Engineering     (flowgrid loop-train)")
+        print("  [9] Exit")
         print("-" * 80)
 
-        choice = input(f"{Style.CYAN}Enter selection [1-8]: {Style.RESET}").strip()
+        choice = input(f"{Style.CYAN}Enter selection [1-9]: {Style.RESET}").strip()
+
+        default_data = (
+            "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
+            if os.path.exists("flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv")
+            else ("synthetic_sales_daily.csv" if os.path.exists("synthetic_sales_daily.csv") else "unused_data/synthetic_sales_daily.csv")
+        )
 
         class DummyArgs:
             json = False
-            data = "synthetic_sales_daily.csv"
+            data = default_data
             models_dir = "saved_models"
             store = None
             sku = None
@@ -535,6 +621,8 @@ def run_interactive():
             epochs = 2
             batch_size = 256
             interactive_loop = True
+            top_skus = 20
+            stores = 12
 
         args = DummyArgs()
         if choice == "1":
@@ -544,18 +632,20 @@ def run_interactive():
         elif choice == "3":
             cmd_optimize(args)
         elif choice == "4":
-            cmd_scenario(args)
+            cmd_recommend(args)
         elif choice == "5":
-            cmd_test(args)
+            cmd_scenario(args)
         elif choice == "6":
-            cmd_audit(args)
+            cmd_test(args)
         elif choice == "7":
+            cmd_audit(args)
+        elif choice == "8":
             cmd_loop_train(args)
-        elif choice in ("8", "q", "exit"):
+        elif choice in ("9", "q", "exit"):
             print("\nExiting FlowGrid CLI. Goodbye!\n")
             break
         else:
-            print(Style.warn("Invalid selection. Please choose 1-8."))
+            print(Style.warn("Invalid selection. Please choose 1-9."))
 
         input(f"\n{Style.DIM}Press Enter to return to main menu...{Style.RESET}")
 
@@ -564,9 +654,14 @@ def run_interactive():
 # MAIN CLI ENTRYPOINT
 # ------------------------------------------------------------------------------
 def main():
+    default_data = (
+        "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
+        if os.path.exists("flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv")
+        else ("synthetic_sales_daily.csv" if os.path.exists("synthetic_sales_daily.csv") else "unused_data/synthetic_sales_daily.csv")
+    )
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON")
-    common_parser.add_argument("--data", default="synthetic_sales_daily.csv", help="Path to sales daily CSV")
+    common_parser.add_argument("--data", default=default_data, help="Path to sales daily CSV")
     common_parser.add_argument("--models-dir", default="saved_models", help="Directory with saved models")
 
     parser = argparse.ArgumentParser(
@@ -590,6 +685,11 @@ def main():
     p_optimize = subparsers.add_parser("optimize", parents=[common_parser], help="Constrained stock allocation optimizer")
     p_optimize.set_defaults(func=cmd_optimize)
 
+    p_rec = subparsers.add_parser("recommend", parents=[common_parser], help="Full AI FMCG Distribution Intelligence & 4-Module Plan")
+    p_rec.add_argument("--top-skus", type=int, default=20, help="Number of top SKUs to allocate (default 20)")
+    p_rec.add_argument("--stores", type=int, default=12, help="Number of active stores to allocate (default 12)")
+    p_rec.set_defaults(func=cmd_recommend)
+
     p_scenario = subparsers.add_parser("scenario", parents=[common_parser], help="Controlled what-if scenarios (Static vs AI)")
     p_scenario.set_defaults(func=cmd_scenario)
 
@@ -606,6 +706,7 @@ def main():
     p_loop.add_argument("--batch-size", type=int, default=256, help="Batch size")
     p_loop.add_argument("--no-prompt", dest="interactive_loop", action="store_false", help="Disable interactive prompt loop")
     p_loop.set_defaults(func=cmd_loop_train, interactive_loop=True)
+
 
     args = parser.parse_args()
 

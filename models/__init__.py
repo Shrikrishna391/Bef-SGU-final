@@ -10,6 +10,8 @@ from .stock_optimizer import DistributionOptimizer
 from .static_baseline import StaticAllocationBaseline
 from .data_loader import FlowGridDataLoader
 from .neural_demand_forecaster import NeuralDemandForecaster, DeepDemandNet
+from .inventory_optimizer import InventoryOptimizer
+from .fmcg_distribution_engine import FMCGDistributionEngine
 
 __all__ = [
     "FeaturePipeline",
@@ -19,5 +21,8 @@ __all__ = [
     "StaticAllocationBaseline",
     "FlowGridDataLoader",
     "NeuralDemandForecaster",
-    "DeepDemandNet"
+    "DeepDemandNet",
+    "InventoryOptimizer",
+    "FMCGDistributionEngine"
 ]
+

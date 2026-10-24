@@ -249,7 +249,73 @@ class TestFlowGridModels(unittest.TestCase):
         self.assertFalse(np.isnan(preds).any(), "Neural predictions contain NaNs!")
         self.assertTrue(np.issubdtype(preds.dtype, np.integer), "Neural predictions must be discrete integers!")
 
+    def test_09_inventory_optimization_net_replenishment(self):
+        """Verify Core Concept 2: Net Replenishment = max(0, Target - Current) & Safety Stock."""
+        from models.inventory_optimizer import InventoryOptimizer
+        inv_opt = InventoryOptimizer(service_level_z=1.65, default_lead_time_days=1.5)
+
+        # Example from Problem Statement:
+        # Demand: 300 packets, Current stock: 50 packets -> Net Replenishment needed
+        demand = {("STORE-KOLHAPUR", "SKU-BISCUIT"): 300}
+        curr_stock = {("STORE-KOLHAPUR", "SKU-BISCUIT"): 50}
+
+        res = inv_opt.calculate_net_replenishment(demand, curr_stock)
+        pos = res["store_sku_positions"][0]
+
+        # Target stock = 300 + safety_stock
+        self.assertGreaterEqual(pos["target_stock"], 300)
+        # Net needed = target_stock - 50
+        self.assertEqual(pos["net_replenishment_needed"], pos["target_stock"] - 50)
+        self.assertEqual(res["net_replenishment_dict"][("STORE-KOLHAPUR", "SKU-BISCUIT")], pos["target_stock"] - 50)
+        self.assertIn(pos["stock_status"], ("CRITICAL_STOCKOUT_RISK", "LOW_STOCK"))
+
+        # Test overstocked case (Demand: 100, Stock: 300) -> Net needed must be 0
+        overstock_d = {("STORE-PUNE", "SKU-SOAP"): 100}
+        overstock_s = {("STORE-PUNE", "SKU-SOAP"): 300}
+        res_over = inv_opt.calculate_net_replenishment(overstock_d, overstock_s)
+        pos_over = res_over["store_sku_positions"][0]
+        self.assertEqual(pos_over["net_replenishment_needed"], 0)
+        self.assertEqual(pos_over["stock_status"], "OVERSTOCKED_EXCESS")
+
+    def test_10_fmcg_distribution_engine_modules(self):
+        """Verify End-to-End FMCG Distribution Intelligence Engine & 4 Prototype Modules."""
+        from models.fmcg_distribution_engine import FMCGDistributionEngine
+        engine = FMCGDistributionEngine()
+        result = engine.run_distribution_intelligence(top_n_skus=10, num_stores=5)
+
+        self.assertEqual(result["engine_status"], "SUCCESS")
+        
+        # Module 1: Inventory Dashboard
+        m1 = result["module_1_inventory_dashboard"]
+        self.assertIn("warehouse_stocks", m1)
+        self.assertGreater(m1["total_warehouse_stock"], 0)
+
+        # Module 2: Demand Prediction
+        m2 = result["module_2_demand_prediction"]
+        self.assertGreater(m2["total_forecasted_units"], 0)
+        self.assertGreater(m2["total_net_replenishment_units"], 0)
+
+        # Module 3: Recommended Distribution Plan with Reasons
+        m3 = result["module_3_distribution_recommendations"]
+        self.assertGreater(len(m3), 0)
+        first_rec = m3[0]
+        self.assertIn("product", first_rec)
+        self.assertIn("from_warehouse", first_rec)
+        self.assertIn("to_store", first_rec)
+        self.assertIn("quantity", first_rec)
+        self.assertIn("estimated_cost", first_rec)
+        self.assertIn("reason", first_rec)
+        self.assertGreater(len(first_rec["reason"]), 5)
+
+        # Module 4: Optimization Dashboard (Before vs After)
+        m4 = result["module_4_optimization_dashboard"]
+        self.assertIn("before_optimization", m4)
+        self.assertIn("after_ai_optimization", m4)
+        self.assertLessEqual(m4["after_ai_optimization"]["stockout_risk_pct"], m4["before_optimization"]["stockout_risk_pct"])
+        self.assertLessEqual(m4["after_ai_optimization"]["optimized_transport_cost_inr"], m4["before_optimization"]["estimated_transport_cost_inr"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
