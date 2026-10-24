@@ -194,7 +194,7 @@ export function LandingPage() {
                   </div>
                 </div>
               )}
-              <p className="landing-decision-reason">Why this route: the allocation engine compares retailer demand, available stock, route cost, and the retailer’s shelf-life threshold before selecting a source warehouse.</p>
+              <p className="landing-decision-reason">Why this route: the allocation engine compares retailer demand, available stock, modeled freight, transit time, and the retailer’s shelf-life threshold before selecting a source warehouse. The seed route data does not include road distance or vehicle capacity, so those are not claimed here.</p>
             </article>
           )}
         </section>

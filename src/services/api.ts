@@ -198,7 +198,7 @@ export const FlowGridAPI = {
         return {
           isOnline: true,
           status: data.status || 'READY',
-          database: data.database || 'CONNECTED',
+          database: data.database || 'UNKNOWN',
           latencyMs,
           environment: data.environment,
           version: data.version,

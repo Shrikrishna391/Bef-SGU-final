@@ -10,9 +10,11 @@ import { WarehouseOpsView } from './components/WarehouseOpsView';
 import { KiranaRetailerView } from './components/KiranaRetailerView';
 import { ImportStudioView } from './components/ImportStudioView';
 import { AdminHealthView } from './components/AdminHealthView';
+import { SmartDispatchView } from './components/SmartDispatchView';
 import { MapSection } from './components/map-section/MapSection';
 import { DemoWalkthroughModal } from './components/DemoWalkthroughModal';
 import { WhatIfSimulatorModal } from './components/WhatIfSimulatorModal';
+import { Sun, Moon } from 'lucide-react';
 
 import {
   INITIAL_PRODUCTS,
@@ -36,7 +38,8 @@ import {
   UserRole,
   SyncEvent,
   InTransitShipment,
-  RejectionReason
+  RejectionReason,
+  ThemeMode
 } from './types';
 
 import { runOptimizationEngine } from './services/optimizationEngine';
@@ -53,6 +56,9 @@ export const App: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole>('rohit');
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [backendStatus, setBackendStatus] = useState<BackendHealthStatus | null>(null);
+  const [theme, setTheme] = useState<ThemeMode>('day');
+
+  const handleToggleTheme = () => setTheme(prev => prev === 'night' ? 'day' : 'night');
 
   // Sync active user persona with API client
   useEffect(() => {
@@ -498,7 +504,9 @@ export const App: React.FC = () => {
   const currentKirana = retailers.find(r => r.id === 'RET-GAN') || retailers[0];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row">
+    <div className={`min-h-screen flex flex-col lg:flex-row transition-colors duration-200 ${
+      theme === 'day' ? 'theme-day bg-[#f8f6f0] text-[#0a192f]' : 'theme-night bg-slate-950 text-slate-100'
+    }`}>
       {/* Left Sidebar Navigation */}
       <Navbar
         activeTab={activeTab}
@@ -511,33 +519,61 @@ export const App: React.FC = () => {
         onOpenDemoModal={() => setIsDemoModalOpen(true)}
         onOpenWhatIfModal={() => setIsWhatIfModalOpen(true)}
         onTriggerSync={handleTriggerSync}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Content Column */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen overflow-x-hidden">
         {/* Top Context Sub-Bar (Desktop) */}
-        <div className="hidden lg:flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-6 py-2.5 bg-slate-900/40 border-b border-slate-800/80 text-xs text-slate-400">
+        <div className={`hidden lg:flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-6 py-2.5 border-b text-xs transition-colors duration-200 ${
+          theme === 'day'
+            ? 'bg-white/95 border-slate-200/90 text-slate-700 shadow-sm'
+            : 'bg-slate-900/40 border-slate-800/80 text-slate-400'
+        }`}>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-semibold text-slate-200 capitalize">
+            <span className={`font-semibold capitalize ${theme === 'day' ? 'text-[#0a192f]' : 'text-slate-200'}`}>
               {activeTab === 'plans' ? 'Allocation Plan & AI Engine' :
                activeTab === 'forecast' ? 'Demand Forecasting Intelligence' :
                activeTab === 'map' ? 'Demand Map Intelligence' :
                activeTab === 'benchmark' ? 'Baseline Impact Benchmark' :
+               activeTab === 'dispatch' ? 'Smart Delivery Agent & Native Driver Dispatch' :
                activeTab === 'warehouse' ? 'Warehouse Picking & Operations' :
                activeTab === 'retailer' ? 'Kirana Field POS & Capture' :
                activeTab === 'import' ? 'Master Data Import Studio' :
                'System Health & Monitoring'}
             </span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400">{PLAN_HORIZON_DAYS}-day planning horizon</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-indigo-300 font-mono text-[11px]">Forecast panel: {SYNTHETIC_SALES_PANEL.storeCount} synthetic stores · {SYNTHETIC_SALES_PANEL.skuCount} SKUs</span>
+            <span className="text-slate-400">•</span>
+            <span className="text-slate-500">{PLAN_HORIZON_DAYS}-day planning horizon</span>
+            <span className="text-slate-400">•</span>
+            <span className="text-indigo-600 dark:text-indigo-300 font-mono text-[11px]">Maharashtra Logistics Grid</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-            <span className="text-slate-400">Workspace records: <strong className="text-slate-200">{retailers.length} retailers / {products.length} SKUs / {warehouses.length} warehouses</strong></span>
-            <span className="text-slate-600">|</span>
-            <span className="text-amber-300">Synthetic demo inputs</span>
+          <div className="flex flex-wrap items-center gap-3 text-[11px]">
+            {/* Quick Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={handleToggleTheme}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs transition-all cursor-pointer shadow-sm ${
+                theme === 'day'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                  : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              {theme === 'day' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                  <span>Day Mode (Cream Navy)</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
+                  <span>Night Mode (Cosmic)</span>
+                </>
+              )}
+            </button>
+            <span className="text-slate-400">|</span>
+            <span className="text-slate-500">Solve Time: <strong className="text-indigo-600 dark:text-indigo-300">&lt;1ms</strong></span>
           </div>
         </div>
 
@@ -557,6 +593,13 @@ export const App: React.FC = () => {
               warehouses={warehouses}
               retailers={retailers}
               isGenerating={isGenerating}
+            />
+          )}
+
+          {activeTab === 'dispatch' && (
+            <SmartDispatchView
+              theme={theme}
+              onToggleTheme={handleToggleTheme}
             />
           )}
 

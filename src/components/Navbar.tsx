@@ -20,11 +20,14 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Truck,
+  Sun,
+  Moon
 } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole, ThemeMode } from '../types';
 
-export type ActiveTab = 'forecast' | 'map' | 'plans' | 'benchmark' | 'warehouse' | 'retailer' | 'import' | 'health';
+export type ActiveTab = 'plans' | 'forecast' | 'map' | 'benchmark' | 'warehouse' | 'retailer' | 'dispatch' | 'import' | 'health';
 
 interface NavbarProps {
   activeTab: ActiveTab;
@@ -37,6 +40,8 @@ interface NavbarProps {
   onOpenDemoModal: () => void;
   onOpenWhatIfModal: () => void;
   onTriggerSync: () => void;
+  theme?: ThemeMode;
+  onToggleTheme?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -50,6 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDemoModal,
   onOpenWhatIfModal,
   onTriggerSync,
+  theme = 'night',
+  onToggleTheme,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
@@ -74,6 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     {
       label: 'FIELD & OPERATIONS',
       items: [
+        { id: 'dispatch' as ActiveTab, label: 'Smart Delivery Agent', icon: Truck, badge: 'Native AI' },
         { id: 'warehouse' as ActiveTab, label: 'Warehouse Ops', icon: WarehouseIcon, badge: 'FEFO' },
         { id: 'retailer' as ActiveTab, label: 'Kirana Field POS', icon: Store, badge: 'Offline' },
       ],
@@ -265,9 +273,33 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Bottom Utility & Demo Buttons */}
       <div className="space-y-2 pt-4 border-t border-slate-800/80">
+        {onToggleTheme && (
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer select-none ${
+              theme === 'day'
+                ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            {theme === 'day' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                <span>Theme: Day (Cream Navy)</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
+                <span>Theme: Night (Cosmic)</span>
+              </>
+            )}
+          </button>
+        )}
+
         <button
           onClick={onOpenDemoModal}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm cursor-pointer"
         >
           <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
           <span>3-Min Demo Script</span>
@@ -275,7 +307,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <button
           onClick={onOpenWhatIfModal}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm cursor-pointer"
         >
           <Sliders className="w-3.5 h-3.5 text-emerald-400" />
           <span>What-If Simulator</span>
