@@ -25,13 +25,15 @@ from .inventory_optimizer import InventoryOptimizer
 from .stock_optimizer import DistributionOptimizer
 from .demand_forecaster import DemandForecaster
 from .neural_demand_forecaster import NeuralDemandForecaster
+from .ollama_intelligence import OllamaIntelligenceAdapter
 
 
 class FMCGDistributionEngine:
     def __init__(
         self,
         data_loader: Optional[FlowGridDataLoader] = None,
-        models_dir: str = "saved_models"
+        models_dir: str = "saved_models",
+        ollama_model: str = "llama3"
     ):
         self.loader = data_loader or FlowGridDataLoader()
         self.models_dir = models_dir
@@ -42,6 +44,7 @@ class FMCGDistributionEngine:
             vehicle_capacity_kg=2000.0,
             time_limit_seconds=6.0
         )
+        self.ollama = OllamaIntelligenceAdapter(model=ollama_model)
         self.forecaster = None
         self._load_forecaster()
 
@@ -146,12 +149,46 @@ class FMCGDistributionEngine:
         recommendations_table = opt_solution.get("distribution_recommendations", [])
         impact_dashboard = opt_solution.get("impact_metrics", {})
 
+        # Step 5: Ollama Output Optimization & Key Features Extraction
+        ollama_health = self.ollama.check_health()
+        ollama_output = self.ollama.optimize_distribution_output(
+            distribution_recommendations=recommendations_table,
+            impact_metrics=impact_dashboard
+        )
+        optimized_recommendations = ollama_output.get("optimized_recommendations", recommendations_table)
+
+        # Extract Key Causal Drivers for critical understocked stores
+        key_feature_insights = []
+        if inventory_analysis.get("store_sku_positions"):
+            critical_positions = [
+                p for p in inventory_analysis["store_sku_positions"]
+                if p["stock_status"] in ("CRITICAL_STOCKOUT_RISK", "LOW_STOCK")
+            ][:3]
+            for cp in critical_positions:
+                feat = self.ollama.extract_key_features(
+                    store_id=cp["store_id"],
+                    sku_id=cp["sku_id"],
+                    product_name=sku_names.get(cp["sku_id"], cp["sku_id"]),
+                    feature_data={
+                        "units_sold": cp["forecasted_demand"],
+                        "current_stock": cp["current_stock"],
+                        "days_to_expiry": 35
+                    }
+                )
+                key_feature_insights.append(feat)
+
         return {
             "engine_status": "SUCCESS",
             "module_1_inventory_dashboard": inventory_dashboard,
             "module_2_demand_prediction": demand_prediction_summary,
-            "module_3_distribution_recommendations": recommendations_table,
+            "module_3_distribution_recommendations": optimized_recommendations,
             "module_4_optimization_dashboard": impact_dashboard,
+            "ollama_intelligence": {
+                "health": ollama_health,
+                "engine_status": ollama_output.get("llm_engine"),
+                "executive_briefing": ollama_output.get("executive_dispatch_briefing"),
+                "key_feature_insights": key_feature_insights
+            },
             "solver_summary": {
                 "status": opt_solution["solver_status"],
                 "total_demand_units": opt_solution["total_demand_units"],

@@ -34,7 +34,9 @@ from models.data_loader import FlowGridDataLoader
 from models.neural_demand_forecaster import NeuralDemandForecaster
 from models.inventory_optimizer import InventoryOptimizer
 from models.fmcg_distribution_engine import FMCGDistributionEngine
+from models.ollama_intelligence import OllamaIntelligenceAdapter
 from prd_test_suite import PRDTestSuite, safe_json_default
+
 
 
 
@@ -378,16 +380,23 @@ def cmd_recommend(args):
 
     # 3. MODULE 3: RECOMMENDED DISTRIBUTION PLAN
     print(f"\n{Style.BOLD}MODULE 3: RECOMMENDED DISTRIBUTION PLAN (Explainable AI Decisions){Style.RESET}")
-    print(f"  {'PRODUCT':<30} | {'FROM':<7} | {'TO':<10} | {'QTY':<5} | {'EST COST':<10} | {'REASON / EXPLANATION'}")
-    print("  " + "-" * 115)
+    print(f"  {'PRIORITY':<14} | {'PRODUCT':<28} | {'FROM':<7} | {'TO':<10} | {'QTY':<5} | {'EST COST':<10} | {'REASON / EXPLANATION'}")
+    print("  " + "-" * 125)
     for rec in recommendations[:12]:
         p_name = rec['product']
-        if len(p_name) > 28:
-            p_name = p_name[:25] + "..."
-        print(f"  {p_name:<30} | {rec['from_warehouse']:<7} | {rec['to_store']:<10} | {rec['quantity']:>4} | {rec['estimated_cost']:<10} | {Style.DIM}{rec['reason']}{Style.RESET}")
+        if len(p_name) > 26:
+            p_name = p_name[:23] + "..."
+        prio = rec.get("dispatch_priority", "P2_ROUTINE").replace("PRIORITY_", "")
+        if "P0" in prio:
+            prio_badge = Style.warn(prio)
+        elif "P1" in prio:
+            prio_badge = Style.ok(prio)
+        else:
+            prio_badge = prio
+        print(f"  {prio_badge:<23} | {p_name:<28} | {rec['from_warehouse']:<7} | {rec['to_store']:<10} | {rec['quantity']:>4} | {rec['estimated_cost']:<10} | {Style.DIM}{rec['reason']}{Style.RESET}")
     if len(recommendations) > 12:
         print(f"  ... and {len(recommendations) - 12} additional optimized dispatch movements.")
-    print("  " + "-" * 115)
+    print("  " + "-" * 125)
 
     # 4. MODULE 4: OPTIMIZATION DASHBOARD (BEFORE VS AFTER)
     print(f"\n{Style.BOLD}MODULE 4: OPTIMIZATION DASHBOARD (Before vs After Impact Comparison){Style.RESET}")
@@ -407,10 +416,73 @@ def cmd_recommend(args):
     print(f"  {'Transportation Expense':<30} | INR {before.get('estimated_transport_cost_inr', 0):>8.2f}             | INR {after.get('optimized_transport_cost_inr', 0):>8.2f}             | {transport_savings_str}")
     print(f"  {'Expiry Wastage Protection':<30} | {before.get('at_risk_warehouse_expiry_units', 0):>6} units at risk       | {rescued_units_str}       | {wastage_elim_str}")
     print("  " + "-" * 100)
-    print(f"  Fulfillment Rate: {fulfill_str} | Violations: {Style.ok('0')} | Latency: {solver['wall_time_seconds']}s\n")
+    print(f"  Fulfillment Rate: {fulfill_str} | Violations: {Style.ok('0')} | Latency: {solver['wall_time_seconds']}s")
+
+    # 5. MODULE 5: OLLAMA LLM INTELLIGENCE & KEY FEATURE EXTRACTION
+    ollama_info = result.get("ollama_intelligence", {})
+    print(f"\n{Style.BOLD}MODULE 5: OLLAMA LLM INTELLIGENCE & KEY CAUSAL FEATURE EXTRACTION{Style.RESET}")
+    print(f"  * Engine Architecture: {Style.ok(str(ollama_info.get('engine_status', 'Ollama LLM')))}")
+    print(f"  * Executive Dispatch Briefing:\n{Style.DIM}{ollama_info.get('executive_briefing', 'N/A')}{Style.RESET}")
+    
+    if ollama_info.get("key_feature_insights"):
+        print(f"  * {Style.BOLD}Key Feature Drivers Extracted by Ollama for High-Risk Stores:{Style.RESET}")
+        for feat in ollama_info["key_feature_insights"]:
+            dr = feat.get("extracted_drivers", {})
+            p_driver = dr.get("primary_driver", "High Promotional Uplift")
+            print(f"    - [{feat['store_id']}] {feat['product_name'][:25]:<25} | Driver: {Style.ok(p_driver)} | Promo: {dr.get('promo_elasticity', 'NORMAL')} | Threat: {Style.warn(dr.get('stockout_threat', 'LOW'))}")
+    print()
 
     if getattr(args, "json", False):
         print(json.dumps(result, indent=2, default=safe_json_default))
+    return 0
+
+
+# ------------------------------------------------------------------------------
+# COMMAND: ollama (Ollama LLM Health & Feature Extraction Interface)
+# ------------------------------------------------------------------------------
+def cmd_ollama(args):
+    print_banner()
+    print(Style.header("Ollama LLM Supply Chain Intelligence Interface"))
+    print(f"{Style.DIM}Local LLM status, feature extraction testing & output optimization{Style.RESET}")
+    print("-" * 80)
+
+    adapter = OllamaIntelligenceAdapter(model=getattr(args, "ollama_model", "llama3"))
+    health = adapter.check_health()
+
+    status_badge = Style.ok("ONLINE") if health["status"] == "ONLINE" else Style.warn("STANDBY (Deterministic Fallback Active)")
+    print(f"  Ollama Daemon Status:  {status_badge}")
+    print(f"  Target Endpoint:       {health['base_url']}")
+    print(f"  Active Model:          {health['active_model']}")
+    if health.get("installed_models"):
+        print(f"  Installed Models:      {', '.join(health['installed_models'])}")
+    else:
+        print(f"  Installed Models:      None detected (using deterministic high-reliability fallback)")
+    print("-" * 80)
+
+    # Test sample feature extraction
+    print(f"\n{Style.BOLD}Sample Key Feature Extraction (Fortune Sunflower Oil 1L @ STORE-001):{Style.RESET}")
+    feat = adapter.extract_key_features(
+        store_id="STORE-001",
+        sku_id="SKU-001",
+        product_name="Fortune Sunflower Oil 1L",
+        feature_data={
+            "units_sold": 45,
+            "rolling_mean_7": 28.5,
+            "synthetic_promo_flag": 1,
+            "unit_price": 198.0,
+            "current_stock": 6,
+            "days_to_expiry": 32
+        }
+    )
+    print(f"  Source Engine:    {Style.ok(feat['source'])}")
+    print(f"  Primary Driver:   {feat['extracted_drivers'].get('primary_driver', 'Promotional Campaign Uplift')}")
+    print(f"  Promo Elasticity: {feat['extracted_drivers']['promo_elasticity']}")
+    print(f"  Trend Direction:  {feat['extracted_drivers']['trend_direction']}")
+    print(f"  Stockout Threat:  {Style.warn(feat['extracted_drivers']['stockout_threat'])}")
+    print(f"  AI Insights:      {feat['insights']}\n")
+
+    if getattr(args, "json", False):
+        print(json.dumps(feat, indent=2, default=safe_json_default))
     return 0
 
 
@@ -595,14 +667,15 @@ def run_interactive():
         print("  [2] Run AI Demand Forecasting       (flowgrid forecast)")
         print("  [3] Constrained Stock Allocation   (flowgrid optimize)")
         print("  [4] FMCG Distribution Intelligence (flowgrid recommend)")
-        print("  [5] Benchmark Controlled Scenarios (flowgrid scenario)")
-        print("  [6] Run PRD Acceptance Test Suite  (flowgrid test)")
-        print("  [7] View Decision Audit Trail      (flowgrid audit)")
-        print("  [8] 3x Neural Loop Engineering     (flowgrid loop-train)")
-        print("  [9] Exit")
+        print("  [5] Ollama LLM Intelligence        (flowgrid ollama)")
+        print("  [6] Benchmark Controlled Scenarios (flowgrid scenario)")
+        print("  [7] Run PRD Acceptance Test Suite  (flowgrid test)")
+        print("  [8] View Decision Audit Trail      (flowgrid audit)")
+        print("  [9] 3x Neural Loop Engineering     (flowgrid loop-train)")
+        print("  [10] Exit")
         print("-" * 80)
 
-        choice = input(f"{Style.CYAN}Enter selection [1-9]: {Style.RESET}").strip()
+        choice = input(f"{Style.CYAN}Enter selection [1-10]: {Style.RESET}").strip()
 
         default_data = (
             "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
@@ -623,6 +696,7 @@ def run_interactive():
             interactive_loop = True
             top_skus = 20
             stores = 12
+            ollama_model = "llama3"
 
         args = DummyArgs()
         if choice == "1":
@@ -634,18 +708,20 @@ def run_interactive():
         elif choice == "4":
             cmd_recommend(args)
         elif choice == "5":
-            cmd_scenario(args)
+            cmd_ollama(args)
         elif choice == "6":
-            cmd_test(args)
+            cmd_scenario(args)
         elif choice == "7":
-            cmd_audit(args)
+            cmd_test(args)
         elif choice == "8":
+            cmd_audit(args)
+        elif choice == "9":
             cmd_loop_train(args)
-        elif choice in ("9", "q", "exit"):
+        elif choice in ("10", "q", "exit"):
             print("\nExiting FlowGrid CLI. Goodbye!\n")
             break
         else:
-            print(Style.warn("Invalid selection. Please choose 1-9."))
+            print(Style.warn("Invalid selection. Please choose 1-10."))
 
         input(f"\n{Style.DIM}Press Enter to return to main menu...{Style.RESET}")
 
@@ -688,7 +764,12 @@ def main():
     p_rec = subparsers.add_parser("recommend", parents=[common_parser], help="Full AI FMCG Distribution Intelligence & 4-Module Plan")
     p_rec.add_argument("--top-skus", type=int, default=20, help="Number of top SKUs to allocate (default 20)")
     p_rec.add_argument("--stores", type=int, default=12, help="Number of active stores to allocate (default 12)")
+    p_rec.add_argument("--ollama-model", default="llama3", help="Target Ollama model (default llama3)")
     p_rec.set_defaults(func=cmd_recommend)
+
+    p_ollama = subparsers.add_parser("ollama", parents=[common_parser], help="Test Ollama LLM integration & key feature extraction")
+    p_ollama.add_argument("--ollama-model", default="llama3", help="Target Ollama model (default llama3)")
+    p_ollama.set_defaults(func=cmd_ollama)
 
     p_scenario = subparsers.add_parser("scenario", parents=[common_parser], help="Controlled what-if scenarios (Static vs AI)")
     p_scenario.set_defaults(func=cmd_scenario)

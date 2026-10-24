@@ -314,8 +314,65 @@ class TestFlowGridModels(unittest.TestCase):
         self.assertLessEqual(m4["after_ai_optimization"]["stockout_risk_pct"], m4["before_optimization"]["stockout_risk_pct"])
         self.assertLessEqual(m4["after_ai_optimization"]["optimized_transport_cost_inr"], m4["before_optimization"]["estimated_transport_cost_inr"])
 
+    def test_11_ollama_intelligence_adapter(self):
+        """Verify Ollama LLM integration, key feature extraction, and reliable fallback."""
+        from models.ollama_intelligence import OllamaIntelligenceAdapter
+        adapter = OllamaIntelligenceAdapter(timeout_seconds=0.5)
+
+        # Health check
+        health = adapter.check_health()
+        self.assertIn("status", health)
+        self.assertIn(health["status"], ("ONLINE", "OFFLINE"))
+
+        # Feature extraction (extracts primary driver, promo elasticity, stockout threat)
+        features = adapter.extract_key_features(
+            store_id="STORE-001",
+            sku_id="SKU-001",
+            product_name="Fortune Sunflower Oil 1L",
+            feature_data={
+                "units_sold": 50,
+                "rolling_mean_7": 30.0,
+                "synthetic_promo_flag": 1,
+                "unit_price": 198.0,
+                "current_stock": 5,
+                "days_to_expiry": 28
+            }
+        )
+        self.assertIn("insights", features)
+        self.assertGreater(len(features["insights"]), 10)
+        self.assertIn("extracted_drivers", features)
+        self.assertEqual(features["extracted_drivers"]["promo_elasticity"], "HIGH")
+        self.assertEqual(features["extracted_drivers"]["stockout_threat"], "CRITICAL")
+
+        # Output optimization and executive briefing
+        mock_recs = [{
+            "product": "Fortune Sunflower Oil (SKU-001)",
+            "from_warehouse": "WH-01",
+            "to_store": "STORE-001",
+            "quantity": 45,
+            "estimated_cost": "INR 8.50",
+            "reason": "FEFO Urgent: Lot LOT-2 expires in 28d; dispatched to eliminate warehouse write-off."
+        }]
+        mock_impact = {
+            "before_optimization": {"stockout_risk_pct": 45.0, "estimated_transport_cost_inr": 500.0},
+            "after_ai_optimization": {
+                "stockout_risk_pct": 0.0,
+                "optimized_transport_cost_inr": 350.0,
+                "transport_cost_savings_pct": 30.0,
+                "rescued_near_expiry_units": 45,
+                "expiry_wastage_reduction_pct": 95.0,
+                "stockout_reduction_pct": 45.0
+            }
+        }
+        opt_output = adapter.optimize_distribution_output(mock_recs, mock_impact)
+        self.assertIn("executive_dispatch_briefing", opt_output)
+        self.assertGreater(len(opt_output["executive_dispatch_briefing"]), 20)
+        self.assertIn("optimized_recommendations", opt_output)
+        self.assertEqual(opt_output["optimized_recommendations"][0]["dispatch_priority"], "PRIORITY_P0_IMMEDIATE")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

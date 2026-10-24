@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # FlowGrid: AI-Powered Distribution Intelligence & Inventory Optimization Engine
 
 **SGU-TRIWIZATHON — Problem Statement 2: Distribution Intelligence & Inventory Optimization**
@@ -58,9 +57,9 @@ Enforces First-Expired, First-Out (FEFO) batch allocation:
 
 ---
 
-## 2. The Four Prototype Hackathon Modules
+## 2. The Five Prototype Hackathon Modules
 
-FlowGrid provides a complete, working demonstration through CLI and Python interfaces:
+FlowGrid provides a complete, working demonstration through CLI and Python interfaces across five intelligent modules:
 
 ### Module 1: Inventory Dashboard
 - **Regional Warehouse Inventory**: Real-time usable stock across WH-01 (Pune Central), WH-02 (Pune North), and WH-03 (Pimpri).
@@ -72,13 +71,13 @@ FlowGrid provides a complete, working demonstration through CLI and Python inter
 - Net Replenishment computation deducting store on-hand stock and applying dynamic safety stock buffers.
 
 ### Module 3: Distribution Recommendation Engine
-Generates an actionable, explainable dispatch table:
+Generates an actionable, explainable dispatch table with priority badges (`P0_IMMEDIATE`, `P1_HIGH`, `P2_ROUTINE`):
 
-| Product | From | To | Quantity | Estimated Cost | Reason / Explanation |
-| :--- | :--- | :--- | :---: | :---: | :--- |
-| **Fortune Sunflower Oil 1L** | WH-01 | STORE-001 | 47 pkts | INR 8.47 | **FEFO Priority**: Lot LOT-1 expires in 46d; prioritized for immediate consumption. \| **Nearest Depot**: WH-01 is closest (6.9km vs 13.6km, saving 6.7km). \| **Stockout Defense**: Store stock critical (9 units). |
-| **Fortune Sun Lite Oil 1L** | WH-01 | STORE-001 | 22 pkts | INR 3.97 | **FEFO Urgent**: Lot LOT-2 expires in 24d; dispatched to active store to eliminate warehouse expiry write-off. \| **Nearest Depot**: Optimal corridor. |
-| **Fortune Cottonlite 1L** | WH-01 | STORE-002 | 8 pkts | INR 0.90 | **FEFO Urgent**: Lot LOT-2 expires in 19d. \| **Nearest Depot**: WH-01 saving 9.5km transit. \| **Inventory Rebalancing**: Net gap closed. |
+| Product | From | To | Quantity | Estimated Cost | Priority | Reason / Explanation |
+| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
+| **Fortune Sunflower Oil 1L** | WH-01 | STORE-001 | 47 pkts | INR 8.47 | `[P0_IMMEDIATE]` | **FEFO Priority**: Lot LOT-1 expires in 46d; prioritized for immediate consumption. \| **Nearest Depot**: WH-01 is closest (6.9km vs 13.6km, saving 6.7km). \| **Stockout Defense**: Store stock critical (9 units). |
+| **Fortune Sun Lite Oil 1L** | WH-01 | STORE-001 | 22 pkts | INR 3.97 | `[P1_HIGH]` | **FEFO Urgent**: Lot LOT-2 expires in 24d; dispatched to active store to eliminate warehouse expiry write-off. \| **Nearest Depot**: Optimal corridor. |
+| **Fortune Cottonlite 1L** | WH-01 | STORE-002 | 8 pkts | INR 0.90 | `[P2_ROUTINE]` | **FEFO Urgent**: Lot LOT-2 expires in 19d. \| **Nearest Depot**: WH-01 saving 9.5km transit. \| **Inventory Rebalancing**: Net gap closed. |
 
 ### Module 4: Optimization Dashboard (Before vs After Impact)
 
@@ -88,6 +87,16 @@ Generates an actionable, explainable dispatch table:
 | **Transportation Expense** | INR 540.89 | **INR 367.33** | **-32.1% Cost Reduction** |
 | **Expiry Wastage Protection** | 1,022 units at risk | **792 units rescued** | **85.0% Wastage Elimination** |
 | **Network Fulfillment** | Fragmented | **100.0%** | **0 Hard Violations Guaranteed** |
+
+### Module 5: Ollama LLM Intelligence & Key Causal Feature Extraction
+FlowGrid features a native local Ollama LLM integration (`models/ollama_intelligence.py`) for automated causal driver discovery and output reliability optimization:
+- **Key Feature Extraction**: Unpacks complex mathematical predictions into clear causal factors:
+  - *Promotional Elasticity*: Quantifies demand lift attributed to store-level discounts.
+  - *Stockout Vulnerability*: Flags depleted safety stock thresholds before stockouts occur.
+  - *Trend Acceleration*: Detects positive momentum over 7-day and 14-day rolling windows.
+  - *Shelf-Life Urgency*: Identifies FEFO lots requiring priority transit corridors.
+- **Dynamic Dispatch Prioritization**: Tags dispatch instructions into operational tiers (`P0_IMMEDIATE` < 2 days supply, `P1_HIGH` < 4 days, `P2_ROUTINE`).
+- **High-Reliability Deterministic Fallback**: Connects to local Ollama (`http://localhost:11434`), and automatically falls back to an internal analytical engine within 1.2s if Ollama is offline or times out, guaranteeing 100% operational reliability and zero pipeline crashes.
 
 ---
 
@@ -101,6 +110,7 @@ Generates an actionable, explainable dispatch table:
 | **Isolation Forest** | Shock & Outlier Detection | `IsolationForest` | Sales deviations, price ratio, promo flags | Clamps abnormal shocks to prevent over-ordering |
 | **OR-Tools CP-SAT** | Constrained Stock Allocation | `cp_model.CpModel` | Forecast demand, warehouse stock, distance matrix | 100% hard constraint satisfaction, 0 overselling |
 | **DeepDemandNet** | 3x Neural Loop Engineering | PyTorch Entity Embeddings + Residual MLP | Store (8d), SKU (16d), Weekday (4d), continuous lags | Multi-round backpropagation, AdamW, Softplus head |
+| **Ollama LLM Intelligence** | Causal Extraction & Optimization | Local Ollama API (Llama3/Mistral/Qwen) | Features, replenishment gaps, expiry days, routes | Dual-layer: LLM reasoning + zero-downtime deterministic fallback |
 
 ---
 
@@ -121,28 +131,31 @@ In `DeepDemandNet`, weights and biases ($W, b$) are iteratively optimized throug
 FlowGrid includes a full-featured CLI tool for operators and judges:
 
 ```bash
-# 1. Full FMCG Distribution Intelligence (All 4 Modules: Dashboard, Forecast, Plan, Impact)
+# 1. Full FMCG Distribution Intelligence (All 5 Modules: Dashboard, Forecast, Plan, Impact, Ollama)
 python flowgrid_cli.py recommend --top-skus 20 --stores 12
 
-# 2. Interactive Operator & Judge Terminal Menu
+# 2. Ollama LLM Causal Extraction & Output Optimization Diagnostics
+python flowgrid_cli.py ollama --model llama3
+
+# 3. Interactive Operator & Judge Terminal Menu (Includes Ollama diagnostics)
 python flowgrid_cli.py -i
 
-# 3. Constrained Stock Allocation Optimizer
+# 4. Constrained Stock Allocation Optimizer
 python flowgrid_cli.py optimize
 
-# 4. AI Demand Forecasting & Benchmark
+# 5. AI Demand Forecasting & Benchmark
 python flowgrid_cli.py forecast --sku SKU-001
 
-# 5. 3x Neural Loop Engineering & Multi-Round Backpropagation
+# 6. 3x Neural Loop Engineering & Multi-Round Backpropagation
 python flowgrid_cli.py loop-train --rows 25000 --no-prompt
 
-# 6. Controlled Scenario Benchmark (Static Baseline vs AI Optimizer)
+# 7. Controlled Scenario Benchmark (Static Baseline vs AI Optimizer)
 python flowgrid_cli.py scenario
 
-# 7. PRD Acceptance Test Suite
+# 8. PRD Acceptance Test Suite
 python flowgrid_cli.py test
 
-# 8. Decision Audit Trail & Model Provenance
+# 9. Decision Audit Trail & Model Provenance
 python flowgrid_cli.py audit
 ```
 
@@ -178,8 +191,9 @@ Outputs saved to `saved_models/`:
 - `deep_demand_net.pt` (Optimized PyTorch neural network weights & biases)
 - `pipeline_summary_report.json` (Traceable execution audit metrics)
 - `prd_test_report.json` (Automated PRD verification report)
-=======
-# HETVAYA (हेत्वय)
+---
+
+# Part II: HETVAYA Web Application & Frontend Dashboard
 
 ![HETVAYA Distribution Intelligence](docs/media/hetvaya_v3_hero_render.jpg)
 
@@ -337,4 +351,3 @@ Typechecks via `tsc -b` and produces optimized assets in `dist/`.
 Developed for the **SGU Triwizathon Hackathon (Problem Statement 2: FMCG Distribution Intelligence & Inventory Optimization Engine)**.
 
 Distributed under the [MIT License](LICENSE).
->>>>>>> origin/main

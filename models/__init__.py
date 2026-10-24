@@ -12,6 +12,7 @@ from .data_loader import FlowGridDataLoader
 from .neural_demand_forecaster import NeuralDemandForecaster, DeepDemandNet
 from .inventory_optimizer import InventoryOptimizer
 from .fmcg_distribution_engine import FMCGDistributionEngine
+from .ollama_intelligence import OllamaIntelligenceAdapter
 
 __all__ = [
     "FeaturePipeline",
@@ -23,6 +24,7 @@ __all__ = [
     "NeuralDemandForecaster",
     "DeepDemandNet",
     "InventoryOptimizer",
-    "FMCGDistributionEngine"
+    "FMCGDistributionEngine",
+    "OllamaIntelligenceAdapter"
 ]
 
