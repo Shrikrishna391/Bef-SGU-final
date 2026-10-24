@@ -1,0 +1,98 @@
+{
+  "execution_timestamp": "2026-10-24T20:22:53.332535",
+  "forecasting_metrics": {
+    "seasonal_naive": {
+      "wape": 0.21952639892846484,
+      "mae": 6.701555555555555,
+      "rmse": 9.731695067607127,
+      "r2": 0.6566097788530605
+    },
+    "random_forest": {
+      "wape": 0.15204224993266507,
+      "mae": 4.641444444444445,
+      "rmse": 6.859502735459603,
+      "r2": 0.8293932515047167
+    },
+    "lightgbm": {
+      "wape": 0.1525299731388264,
+      "mae": 4.656333333333333,
+      "rmse": 6.920525028252312,
+      "r2": 0.8263443067674541
+    }
+  },
+  "decision_audit": {
+    "active_model": "random_forest",
+    "baseline_wape": 0.21952639892846484,
+    "active_model_wape": 0.15204224993266507,
+    "relative_improvement_pct": 30.740789866366026,
+    "status": "APPROVED_BY_GATE",
+    "reason": "random_forest beat baseline by 30.74% (>= 5% required)"
+  },
+  "anomaly_metrics": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0,
+    "roc_auc": 0.48064830324461816,
+    "detected_anomalies_count": 305,
+    "actual_anomalies_count": 90
+  },
+  "optimizer_summary": {
+    "solver_status": "OPTIMAL",
+    "total_demand_units": 3283,
+    "total_allocated_units": 3283,
+    "total_unmet_units": 0,
+    "fulfillment_rate_pct": 100.0,
+    "modeled_transport_cost": 443.83,
+    "wall_time_seconds": 0.294
+  },
+  "neural_loop_engineering": {
+    "model_architecture": "DeepDemandNet (Entity Embeddings + Residual MLP + Softplus)",
+    "cycles_completed": 3,
+    "cycle_history": [
+      {
+        "cycle": 1,
+        "cycle_name": "Global Convergence",
+        "learning_rate": 0.0015,
+        "final_train_loss": 5.1468,
+        "validation_wape_pct": 19.33,
+        "validation_mae": 5.9,
+        "weight_l2_norm": 30.9286,
+        "bias_l2_norm": 5.8823,
+        "delta_weight_norm": 4.9902,
+        "delta_bias_norm": 5.1323,
+        "timestamp": "2026-10-24T20:22:33.937793"
+      },
+      {
+        "cycle": 2,
+        "cycle_name": "Hard-Sample Mining",
+        "learning_rate": 0.0005,
+        "final_train_loss": 4.3028,
+        "validation_wape_pct": 16.68,
+        "validation_mae": 5.09,
+        "weight_l2_norm": 31.2277,
+        "bias_l2_norm": 6.652,
+        "delta_weight_norm": 0.2991,
+        "delta_bias_norm": 0.7697,
+        "timestamp": "2026-10-24T20:22:43.615190"
+      },
+      {
+        "cycle": 3,
+        "cycle_name": "Bias Calibration",
+        "learning_rate": 0.0001,
+        "final_train_loss": 4.2639,
+        "validation_wape_pct": 16.16,
+        "validation_mae": 4.93,
+        "weight_l2_norm": 31.2521,
+        "bias_l2_norm": 6.7145,
+        "delta_weight_norm": 0.0244,
+        "delta_bias_norm": 0.0625,
+        "timestamp": "2026-10-24T20:22:53.231639"
+      }
+    ],
+    "weight_bias_summary": {
+      "weight_l2_norm": 31.2521,
+      "bias_l2_norm": 6.7145,
+      "total_trainable_parameters": 17277
+    }
+  }
+}
