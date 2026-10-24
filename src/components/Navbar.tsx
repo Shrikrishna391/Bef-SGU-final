@@ -1,0 +1,373 @@
+import React, { useState } from 'react';
+import {
+  Boxes,
+  TrendingUp,
+  Cpu,
+  BarChart3,
+  Warehouse as WarehouseIcon,
+  Store,
+  UploadCloud,
+  Activity,
+  Wifi,
+  WifiOff,
+  Sparkles,
+  Sliders,
+  CheckCircle2,
+  AlertTriangle,
+  Globe,
+  MapPin,
+  Menu,
+  X,
+  ChevronRight,
+  ShieldCheck,
+  UserCheck
+} from 'lucide-react';
+import { UserRole } from '../types';
+
+export type ActiveTab = 'forecast' | 'map' | 'plans' | 'benchmark' | 'warehouse' | 'retailer' | 'import' | 'health';
+
+interface NavbarProps {
+  activeTab: ActiveTab;
+  setActiveTab: (tab: ActiveTab) => void;
+  userRole: UserRole;
+  setUserRole: (role: UserRole) => void;
+  isOnline: boolean;
+  setIsOnline: (online: boolean) => void;
+  queuedEventCount: number;
+  onOpenDemoModal: () => void;
+  onOpenWhatIfModal: () => void;
+  onTriggerSync: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({
+  activeTab,
+  setActiveTab,
+  userRole,
+  setUserRole,
+  isOnline,
+  setIsOnline,
+  queuedEventCount,
+  onOpenDemoModal,
+  onOpenWhatIfModal,
+  onTriggerSync,
+}) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
+
+  const roleNames: Record<UserRole, { name: string; title: string; badgeColor: string }> = {
+    rohit: { name: 'Rohit Deshpande', title: 'Distribution Planner', badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+    sunita: { name: 'Sunita Deshmukh', title: 'Warehouse Manager (Pune Hub)', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+    ganesh: { name: 'Ganesh Patil', title: 'Kirana Store Owner (Kolhapur)', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+    priya: { name: 'Priya Sharma', title: 'System Administrator', badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  };
+
+  const navCategories = [
+    {
+      label: 'PLANNING & FORECAST',
+      items: [
+        { id: 'plans' as ActiveTab, label: 'Allocation Plan', icon: Cpu, badge: 'ALLOC' },
+        { id: 'forecast' as ActiveTab, label: 'Demand Forecast', icon: TrendingUp, badge: 'Quantile' },
+        { id: 'map' as ActiveTab, label: 'Demand Map', icon: MapPin, badge: 'Geo' },
+        { id: 'benchmark' as ActiveTab, label: 'Impact Benchmark', icon: BarChart3, badge: '-40%' },
+      ],
+    },
+    {
+      label: 'FIELD & OPERATIONS',
+      items: [
+        { id: 'warehouse' as ActiveTab, label: 'Warehouse Ops', icon: WarehouseIcon, badge: 'FEFO' },
+        { id: 'retailer' as ActiveTab, label: 'Kirana Field POS', icon: Store, badge: 'Offline' },
+      ],
+    },
+    {
+      label: 'DATA & OBSERVABILITY',
+      items: [
+        { id: 'import' as ActiveTab, label: 'Data Import Studio', icon: UploadCloud, badge: '5% Rule' },
+        { id: 'health' as ActiveTab, label: 'System Health & Alerts', icon: Activity, badge: 'Live' },
+      ],
+    },
+  ];
+
+  const handleTabClick = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full justify-between p-4 space-y-6">
+      {/* Top Brand Section */}
+      <div className="space-y-4">
+        <div
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={() => handleTabClick('plans')}
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/40 group-hover:scale-105 transition-transform">
+            <Boxes className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                HETVAYA
+              </span>
+              <span className="text-[10px] uppercase tracking-widest font-bold px-1.5 py-0.5 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded">
+                v1.5
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Distribution Intelligence
+            </p>
+          </div>
+        </div>
+
+        {/* Hackathon Micro Badge */}
+        <div className="px-2.5 py-1.5 rounded-lg bg-indigo-950/40 border border-indigo-800/40 flex items-center justify-between text-[11px]">
+          <span className="text-indigo-300 font-semibold flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Problem Statement 2
+          </span>
+          <span className="text-[10px] text-slate-400 font-mono">FMCG</span>
+        </div>
+
+        {/* User Persona Switcher Card */}
+        <div className="relative">
+          <div
+            onClick={() => setPersonaDropdownOpen(!personaDropdownOpen)}
+            className="flex items-center justify-between bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-2.5 cursor-pointer transition-all shadow-sm"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-md">
+                {userRole[0].toUpperCase()}
+              </div>
+              <div className="truncate text-left">
+                <p className="text-xs font-semibold text-slate-200 truncate leading-tight">
+                  {roleNames[userRole].name}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  {roleNames[userRole].title}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] text-indigo-400 font-semibold shrink-0 ml-1">
+              Switch
+            </span>
+          </div>
+
+          {/* Persona Switcher Dropdown */}
+          {personaDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 py-1">
+                Switch User Persona
+              </p>
+              {(Object.keys(roleNames) as UserRole[]).map(r => (
+                <button
+                  key={r}
+                  onClick={() => {
+                    setUserRole(r);
+                    setPersonaDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                    userRole === r ? 'bg-indigo-600/20 text-indigo-300 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="truncate">
+                    <p className="font-medium text-slate-200 truncate">{roleNames[r].name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{roleNames[r].title}</p>
+                  </div>
+                  {userRole === r && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0 ml-2" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Connectivity & Sync Status Bar */}
+        <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800/80 p-2 rounded-xl text-xs">
+          <button
+            onClick={() => setIsOnline(!isOnline)}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+              isOnline
+                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+            }`}
+            title="Click to toggle simulated online/offline connectivity"
+          >
+            {isOnline ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <Wifi className="w-3.5 h-3.5" />
+                <span>Online</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                <WifiOff className="w-3.5 h-3.5" />
+                <span>Offline</span>
+              </>
+            )}
+          </button>
+
+          {queuedEventCount > 0 ? (
+            <button
+              onClick={onTriggerSync}
+              className="flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-1 rounded-lg border border-amber-500/30 transition-all"
+              title="Click to force sync offline queue"
+            >
+              <span>{queuedEventCount} queued</span>
+              <span className="underline ml-0.5">Sync</span>
+            </button>
+          ) : (
+            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-500/70" /> Synced
+            </span>
+          )}
+        </div>
+
+        {/* Navigation Categories */}
+        <nav className="space-y-4 pt-1">
+          {navCategories.map((cat, idx) => (
+            <div key={idx} className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3">
+                {cat.label}
+              </p>
+              <div className="space-y-0.5">
+                {cat.items.map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabClick(item.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group ${
+                        isActive
+                          ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-indigo-400'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${
+                          isActive
+                            ? 'bg-indigo-700/80 text-indigo-100'
+                            : 'bg-slate-800 text-slate-400 group-hover:text-slate-300'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      {/* Bottom Utility & Demo Buttons */}
+      <div className="space-y-2 pt-4 border-t border-slate-800/80">
+        <button
+          onClick={onOpenDemoModal}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <span>3-Min Demo Script</span>
+        </button>
+
+        <button
+          onClick={onOpenWhatIfModal}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm"
+        >
+          <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+          <span>What-If Simulator</span>
+        </button>
+
+        <p className="text-[10px] text-center text-slate-600 pt-1">
+          Marginal-Value Engine • scikit-learn 1.9
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Left Sidebar: Fixed/Sticky on the Left */}
+      <aside className="hidden lg:flex flex-col w-64 xl:w-72 shrink-0 h-screen sticky top-0 border-r border-slate-800/80 bg-slate-950/95 backdrop-blur-xl z-30 overflow-y-auto">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Top Bar */}
+      <header className="lg:hidden sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl px-4 py-3 flex items-center justify-between">
+        <div
+          className="flex items-center gap-2.5 cursor-pointer"
+          onClick={() => handleTabClick('plans')}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-md">
+            <Boxes className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-extrabold text-base tracking-tight text-white">
+              HETVAYA
+            </span>
+            <span className="text-[9px] uppercase tracking-wider ml-1.5 font-bold px-1 py-0.5 bg-indigo-950 text-indigo-400 border border-indigo-800 rounded">
+              v1.5
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Online status indicator */}
+          <button
+            onClick={() => setIsOnline(!isOnline)}
+            className={`p-1.5 rounded-lg border text-xs ${
+              isOnline
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            }`}
+          >
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Persona Avatar */}
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
+            {userRole[0].toUpperCase()}
+          </div>
+
+          {/* Hamburger toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Sliding Drawer & Backdrop */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Drawer container on the left */}
+          <div className="relative w-72 max-w-[85vw] bg-slate-950 border-r border-slate-800 h-full flex flex-col z-10 shadow-2xl overflow-y-auto">
+            <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Navigation Menu
+              </span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <SidebarContent />
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

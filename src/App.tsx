@@ -1,0 +1,506 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Navbar,
+  ActiveTab
+} from './components/Navbar';
+import { HeroBanner } from './components/HeroBanner';
+import { PlanGeneratorView } from './components/PlanGeneratorView';
+import { ForecastReviewView } from './components/ForecastReviewView';
+import { BaselineComparisonView } from './components/BaselineComparisonView';
+import { WarehouseOpsView } from './components/WarehouseOpsView';
+import { KiranaRetailerView } from './components/KiranaRetailerView';
+import { ImportStudioView } from './components/ImportStudioView';
+import { AdminHealthView } from './components/AdminHealthView';
+import { MapSection } from './components/map-section/MapSection';
+import { DemoWalkthroughModal } from './components/DemoWalkthroughModal';
+import { WhatIfSimulatorModal } from './components/WhatIfSimulatorModal';
+
+import {
+  INITIAL_PRODUCTS,
+  INITIAL_WAREHOUSES,
+  INITIAL_RETAILERS,
+  INITIAL_ROUTES,
+  INITIAL_BATCHES,
+  INITIAL_FORECASTS
+} from './data/mockData';
+
+import {
+  Product,
+  Warehouse,
+  Retailer,
+  Route,
+  InventoryBatch,
+  DemandForecast,
+  PlanRun,
+  UserRole,
+  SyncEvent,
+  InTransitShipment,
+  RejectionReason
+} from './types';
+
+import { runOptimizationEngine } from './services/optimizationEngine';
+import {
+  getStoredEventQueue,
+  enqueueEvent,
+  processEventQueue
+} from './services/offlineSyncService';
+
+export const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('plans');
+  const [userRole, setUserRole] = useState<UserRole>('rohit');
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  // Core Data State
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(INITIAL_WAREHOUSES);
+  const [retailers, setRetailers] = useState<Retailer[]>(INITIAL_RETAILERS);
+  const [routes, setRoutes] = useState<Route[]>(INITIAL_ROUTES);
+  const [batches, setBatches] = useState<InventoryBatch[]>(INITIAL_BATCHES);
+  const [forecasts, setForecasts] = useState<DemandForecast[]>(INITIAL_FORECASTS);
+
+  // In-Transit Shipments
+  const [inTransitShipments, setInTransitShipments] = useState<InTransitShipment[]>([
+    {
+      id: 'TR-PUN-GAN-001',
+      planLineId: 'LINE-INIT-1',
+      warehouseId: 'WH-KOL',
+      retailerId: 'RET-GAN',
+      sku: 'SKU-ATT-05',
+      batchNo: 'B-KOL-ATT-044',
+      cases: 10,
+      units: 120,
+      dispatchedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      eta: '2026-10-25',
+      status: 'IN_TRANSIT',
+    },
+    {
+      id: 'TR-PUN-GAN-002',
+      planLineId: 'LINE-INIT-2',
+      warehouseId: 'WH-KOL',
+      retailerId: 'RET-GAN',
+      sku: 'SKU-OIL-01',
+      batchNo: 'B-KOL-OIL-819',
+      cases: 6,
+      units: 96,
+      dispatchedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      eta: '2026-10-25',
+      status: 'IN_TRANSIT',
+    },
+  ]);
+
+  // Offline Event Queue
+  const [queuedEvents, setQueuedEvents] = useState<SyncEvent[]>([]);
+
+  // Optimization Plan State
+  const [planRun, setPlanRun] = useState<PlanRun | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  // Modals
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState<boolean>(false);
+  const [isWhatIfModalOpen, setIsWhatIfModalOpen] = useState<boolean>(false);
+
+  // Initial plan load
+  useEffect(() => {
+    const initialPlan = runOptimizationEngine({
+      products: INITIAL_PRODUCTS,
+      warehouses: INITIAL_WAREHOUSES,
+      retailers: INITIAL_RETAILERS,
+      routes: INITIAL_ROUTES,
+      batches: INITIAL_BATCHES,
+      forecasts: INITIAL_FORECASTS,
+    });
+    setPlanRun(initialPlan);
+    setQueuedEvents(getStoredEventQueue());
+  }, []);
+
+  // Handler: Generate or Re-generate Optimization Plan
+  const handleGeneratePlan = (simulateTimeout: boolean = false) => {
+    setIsGenerating(true);
+    setTimeout(() => {
+      const newPlan = runOptimizationEngine({
+        products,
+        warehouses,
+        retailers,
+        routes,
+        batches,
+        forecasts,
+        simulateTimeout,
+      });
+      setPlanRun(newPlan);
+      setIsGenerating(false);
+    }, 450);
+  };
+
+  // Handler: Approve All Lines
+  const handleApproveAll = () => {
+    if (!planRun) return;
+    const updatedLines = planRun.lines.map(line => ({
+      ...line,
+      status: 'APPROVED' as const,
+    }));
+    setPlanRun({
+      ...planRun,
+      status: 'APPROVED',
+      lines: updatedLines,
+    });
+  };
+
+  // Handler: Approve Single Line
+  const handleApproveLine = (lineId: string) => {
+    if (!planRun) return;
+    const updatedLines = planRun.lines.map(line =>
+      line.id === lineId ? { ...line, status: 'APPROVED' as const } : line
+    );
+    setPlanRun({
+      ...planRun,
+      lines: updatedLines,
+    });
+  };
+
+  // Handler: Override Line
+  const handleOverrideLine = (lineId: string, newCases: number, reason: string) => {
+    if (!planRun) return;
+    const updatedLines = planRun.lines.map(line => {
+      if (line.id === lineId) {
+        const prod = products.find(p => p.sku === line.sku);
+        const caseSize = prod?.caseSize || 12;
+        const newUnits = newCases * caseSize;
+        return {
+          ...line,
+          cases: newCases,
+          units: newUnits,
+          status: 'OVERRIDDEN' as const,
+          override: {
+            originalCases: line.cases,
+            newCases,
+            reason,
+            overriddenBy: 'Rohit Deshpande (Planner)',
+            timestamp: new Date().toISOString(),
+          },
+        };
+      }
+      return line;
+    });
+
+    setPlanRun({
+      ...planRun,
+      lines: updatedLines,
+    });
+  };
+
+  // Handler: Simulate 409 Snapshot Stale Conflict (FR-11, T9)
+  const handleSimulateStaleConflict = () => {
+    if (!planRun) return;
+    // Mark the first line as STALE (e.g. batch stock changed on warehouse dock)
+    const updatedLines = planRun.lines.map((line, idx) =>
+      idx === 0 ? { ...line, status: 'STALE' as const } : line
+    );
+    setPlanRun({
+      ...planRun,
+      lines: updatedLines,
+    });
+  };
+
+  // Handler: Re-plan Stale Lines from Fresh Snapshot (FR-11b)
+  const handleReplanStaleLines = () => {
+    if (!planRun) return;
+    const freshPlan = runOptimizationEngine({
+      products,
+      warehouses,
+      retailers,
+      routes,
+      batches,
+      forecasts,
+    });
+
+    // Replace stale lines with freshly computed optimal lines
+    const preservedApprovedLines = planRun.lines.filter(l => l.status === 'APPROVED');
+    const freshReplacedLines = freshPlan.lines.filter(
+      fl => !preservedApprovedLines.some(al => al.id === fl.id)
+    );
+
+    setPlanRun({
+      ...planRun,
+      lines: [...preservedApprovedLines, ...freshReplacedLines],
+    });
+  };
+
+  // Handler: Warehouse Dispatch Line -> in_transit (J4)
+  const handleDispatchLine = (lineId: string) => {
+    if (!planRun) return;
+    const line = planRun.lines.find(l => l.id === lineId);
+    if (!line) return;
+
+    // Shift line status to DISPATCHED
+    const updatedLines = planRun.lines.map(l =>
+      l.id === lineId ? { ...l, status: 'DISPATCHED' as const } : l
+    );
+    setPlanRun({
+      ...planRun,
+      lines: updatedLines,
+    });
+
+    // Create In-Transit record
+    const newShipment: InTransitShipment = {
+      id: `TR-${Date.now().toString().slice(-6)}`,
+      planLineId: line.id,
+      warehouseId: line.warehouseId,
+      retailerId: line.retailerId,
+      sku: line.sku,
+      batchNo: line.batchNo,
+      cases: line.cases,
+      units: line.units,
+      dispatchedAt: new Date().toISOString(),
+      eta: line.arrivalDate,
+      status: 'IN_TRANSIT',
+    };
+
+    setInTransitShipments(prev => [newShipment, ...prev]);
+
+    // Decrement physical batch stock and increment version (Section 11.3)
+    setBatches(prev => prev.map(b => {
+      if (b.batchNo === line.batchNo) {
+        return {
+          ...b,
+          qtyUnits: Math.max(0, b.qtyUnits - line.units),
+          reservedUnits: Math.max(0, b.reservedUnits - line.units),
+          version: b.version + 1,
+        };
+      }
+      return b;
+    }));
+  };
+
+  // Handler: Warehouse Batch Stock Count
+  const handleUpdateBatchCount = (batchId: string, countedUnits: number) => {
+    setBatches(prev => prev.map(b => {
+      if (b.id === batchId) {
+        return {
+          ...b,
+          qtyUnits: countedUnits,
+          version: b.version + 1,
+          asOf: new Date().toISOString(),
+        };
+      }
+      return b;
+    }));
+
+    enqueueEvent('STOCK_COUNT', { batchId, qtyUnits: countedUnits, asOf: new Date().toISOString() }, isOnline);
+    setQueuedEvents(getStoredEventQueue());
+  };
+
+  // Handler: Kirana Sale Entry (FR-04 single sales path)
+  const handleRecordSale = (sku: string, unitsSold: number) => {
+    enqueueEvent(
+      'SALE',
+      { retailerId: 'RET-GAN', sku, unitsSold, date: new Date().toISOString().split('T')[0] },
+      isOnline
+    );
+    setQueuedEvents(getStoredEventQueue());
+  };
+
+  // Handler: Kirana Stock Count
+  const handleRecordStockCount = (sku: string, closingUnits: number) => {
+    enqueueEvent(
+      'STOCK_COUNT',
+      { retailerId: 'RET-GAN', sku, closingUnits, asOf: new Date().toISOString() },
+      isOnline
+    );
+    setQueuedEvents(getStoredEventQueue());
+  };
+
+  // Handler: Kirana Receipt Confirmation
+  const handleRecordReceipt = (
+    shipmentId: string,
+    acceptedCases: number,
+    rejectedCases: number,
+    reason?: RejectionReason
+  ) => {
+    setInTransitShipments(prev => prev.map(s => {
+      if (s.id === shipmentId) {
+        return {
+          ...s,
+          status: rejectedCases === 0 ? 'RECEIVED' : acceptedCases === 0 ? 'REJECTED' : 'PARTIAL',
+          acceptedCases,
+          rejectedCases,
+          rejectionReason: reason,
+        };
+      }
+      return s;
+    }));
+
+    enqueueEvent(
+      'RECEIPT',
+      { shipmentId, acceptedCases, rejectedCases, rejectionReason: reason },
+      isOnline
+    );
+    setQueuedEvents(getStoredEventQueue());
+  };
+
+  // Handler: Trigger Queue Sync (Section 15.3)
+  const handleTriggerSync = () => {
+    const existingMap = new Map<string, string>();
+    batches.forEach(b => existingMap.set(b.id, b.asOf));
+
+    const result = processEventQueue(queuedEvents, existingMap);
+    setQueuedEvents(result.processedEvents.filter(e => e.status === 'QUEUED'));
+  };
+
+  const currentKirana = retailers.find(r => r.id === 'RET-GAN') || retailers[0];
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row">
+      {/* Left Sidebar Navigation */}
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        userRole={userRole}
+        setUserRole={setUserRole}
+        isOnline={isOnline}
+        setIsOnline={setIsOnline}
+        queuedEventCount={queuedEvents.filter(e => e.status === 'QUEUED').length}
+        onOpenDemoModal={() => setIsDemoModalOpen(true)}
+        onOpenWhatIfModal={() => setIsWhatIfModalOpen(true)}
+        onTriggerSync={handleTriggerSync}
+      />
+
+      {/* Main Content Column */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen overflow-x-hidden">
+        {/* Top Context Sub-Bar (Desktop) */}
+        <div className="hidden lg:flex items-center justify-between px-6 py-2.5 bg-slate-900/40 border-b border-slate-800/80 text-xs text-slate-400">
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-slate-200 capitalize">
+              {activeTab === 'plans' ? 'Allocation Plan & AI Engine' :
+               activeTab === 'forecast' ? 'Demand Forecasting Intelligence' :
+               activeTab === 'map' ? 'Demand Map Intelligence' :
+               activeTab === 'benchmark' ? 'Baseline Impact Benchmark' :
+               activeTab === 'warehouse' ? 'Warehouse Picking & Operations' :
+               activeTab === 'retailer' ? 'Kirana Field POS & Capture' :
+               activeTab === 'import' ? 'Master Data Import Studio' :
+               'System Health & Monitoring'}
+            </span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400">Weekly Cycle W43 (Oct 2026)</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-indigo-400 font-mono text-[11px]">Network: Maharashtra (Pune Hub, Satara, Kolhapur)</span>
+          </div>
+
+          <div className="flex items-center gap-4 text-[11px]">
+            <span className="text-slate-400">Avg Kirana Margin: <strong className="text-emerald-400">3–5%</strong></span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400">Solve Time: <strong className="text-indigo-300">{planRun?.solveSeconds ? `${(planRun.solveSeconds * 1000).toFixed(2)}ms` : '<1ms'}</strong></span>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Hero Context Banner */}
+          <HeroBanner
+            onQuickGenerate={() => handleGeneratePlan(false)}
+            planStatus={planRun?.solverStatus || 'FEASIBLE'}
+          />
+
+          {/* View Switcher based on Active Tab */}
+          {activeTab === 'plans' && (
+            <PlanGeneratorView
+              planRun={planRun}
+              onGeneratePlan={handleGeneratePlan}
+              onApproveAll={handleApproveAll}
+              onApproveLine={handleApproveLine}
+              onOverrideLine={handleOverrideLine}
+              onSimulateStaleConflict={handleSimulateStaleConflict}
+              onReplanStaleLines={handleReplanStaleLines}
+              products={products}
+              warehouses={warehouses}
+              retailers={retailers}
+              isGenerating={isGenerating}
+            />
+          )}
+
+          {activeTab === 'forecast' && (
+            <ForecastReviewView
+              forecasts={forecasts}
+              products={products}
+              retailers={retailers}
+            />
+          )}
+
+          {activeTab === 'map' && <MapSection />}
+
+          {activeTab === 'benchmark' && (
+            <BaselineComparisonView />
+          )}
+
+          {activeTab === 'warehouse' && (
+            <WarehouseOpsView
+              warehouses={warehouses}
+              batches={batches}
+              approvedLines={planRun?.lines || []}
+              products={products}
+              retailers={retailers}
+              onDispatchLine={handleDispatchLine}
+              onUpdateBatchCount={handleUpdateBatchCount}
+              isOnline={isOnline}
+            />
+          )}
+
+          {activeTab === 'retailer' && (
+            <KiranaRetailerView
+              currentRetailer={currentKirana}
+              products={products}
+              inTransitShipments={inTransitShipments}
+              onRecordSale={handleRecordSale}
+              onRecordReceipt={handleRecordReceipt}
+              onRecordStockCount={handleRecordStockCount}
+              queuedEvents={queuedEvents}
+              isOnline={isOnline}
+              onTriggerSync={handleTriggerSync}
+            />
+          )}
+
+          {activeTab === 'import' && (
+            <ImportStudioView />
+          )}
+
+          {activeTab === 'health' && (
+            <AdminHealthView />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-slate-900 bg-slate-950/80 py-5 text-xs text-slate-500 mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p>
+              HETVAYA Distribution Intelligence &amp; Inventory Optimization Engine • Problem Statement 2 (FMCG)
+            </p>
+            <p className="text-[11px] text-slate-600">
+              Greedy Marginal Allocation • Scikit-learn Quantile ML • React 19 • Offline Resilient Event Queue
+            </p>
+          </div>
+        </footer>
+      </div>
+
+      {/* 3-Minute Demo Walkthrough Modal */}
+      <DemoWalkthroughModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+        onNavigateTab={tab => setActiveTab(tab)}
+        onTriggerGenerate={() => handleGeneratePlan(false)}
+        onTriggerStaleConflict={handleSimulateStaleConflict}
+        onToggleOffline={() => setIsOnline(false)}
+      />
+
+      {/* What-If Scenario Simulator Modal */}
+      <WhatIfSimulatorModal
+        isOpen={isWhatIfModalOpen}
+        onClose={() => setIsWhatIfModalOpen(false)}
+        baseCases={planRun?.totalCases || 38}
+        baseFreight={planRun?.totalFreightRupees || 1420}
+        baseMargin={planRun?.expectedMarginRupees || 49958}
+      />
+    </div>
+  );
+};
+
+
+export default App;
