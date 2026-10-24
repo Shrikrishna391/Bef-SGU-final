@@ -384,3 +384,19 @@ Interactive API documentation will be available at:
 ```bash
 pytest -v
 ```
+
+---
+
+## 📦 Unified Full-Stack Repository Structure
+
+| Subsystem | Primary Path | Tech Stack / Components | Role |
+| :--- | :--- | :--- | :--- |
+| **Frontend UI** | [`src/`](src/) | React 19, TypeScript, Tailwind CSS v4, Recharts | Planner console, Kirana POS, depot picker & benchmark visuals |
+| **Decision & ML Engine** | [`models/`](models/) | PyTorch, Scikit-learn, Joblib | Neural demand forecaster, anomaly detector & stock optimizer |
+| **Authoritative Backend** | [`app/`](app/) | FastAPI, SQLAlchemy 2.0, Pydantic | Inventory store, reservation authority & plan commitment lifecycle |
+| **Database Migrations** | [`alembic/`](alembic/) | Alembic, PostgreSQL / SQLite | Authoritative schema evolution and constraint enforcement |
+| **AI Explainability & Agents** | [`app/api/v1/endpoints/`](app/api/v1/endpoints/) | Local Ollama LLM (`llama3.2:latest`) | Grounded plan trade-off explanation & incident disruption parsing |
+| **Delivery Fleet** | [`app/models/agent.py`](app/models/agent.py) | Autonomous Agents API | Driver telemetry, GPS heartbeats & proximity-based reassignment |
+| **Dataset & Benchmarks** | [`FlowGrid_Maharashtra_Dataset/`](FlowGrid_Maharashtra_Dataset/) | CSV, GeoJSON, OSRM scripts | Maharashtra FMCG demand, weather, roads & depot simulation data |
+| **Test Suite** | [`tests/`](tests/) | Pytest (100 test cases) | Backend decision guard, RBAC, inventory and AI test suites |
+
