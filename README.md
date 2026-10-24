@@ -351,3 +351,36 @@ Typechecks via `tsc -b` and produces optimized assets in `dist/`.
 Developed for the **SGU Triwizathon Hackathon (Problem Statement 2: FMCG Distribution Intelligence & Inventory Optimization Engine)**.
 
 Distributed under the [MIT License](LICENSE).
+
+
+---
+
+# 🚀 FlowGrid Authoritative Backend & Autonomous Delivery System
+
+The authoritative backend is built with **FastAPI**, **SQLAlchemy 2.0**, and **Alembic**, providing the authoritative persistence layer for inventory, reservations, plan lifecycle state transitions, audit trails, and autonomous agents.
+
+## Backend Architecture & Stack
+- **Framework**: FastAPI (Python 3.11+)
+- **Authoritative Persistence**: PostgreSQL / SQLite (`flowgrid_dev.db`) via SQLAlchemy 2.0 & Alembic migrations
+- **Local Ollama LLM Intelligence**: Model `llama3.2:latest` (or `gemma4:12b`) for dynamic fact-grounded plan explainability (`/api/v1/ai/explain-plan`) and disruption parsing (`/api/v1/ai/parse-disruption`)
+- **Autonomous Delivery Agents**: Delivery agent registry, real-time GPS heartbeat tracking, and automatic proximity reassignment (`/api/v1/agents`)
+
+## Running the Backend
+```bash
+# 1. Install Python dependencies
+pip install -r requirements.txt
+
+# 2. Run database migrations
+alembic upgrade head
+
+# 3. Start the FastAPI server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+Interactive API documentation will be available at:
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+## Running Backend Automated Tests
+```bash
+pytest -v
+```
