@@ -49,3 +49,11 @@ coverage/
 
 # Explicitly track audited benchmark verification results
 !results/benchmark.json
+
+# FlowGrid FastAPI Backend & SQLite Dev DB
+*.sqlite
+*.sqlite3
+*.db
+flowgrid_dev.db
+.pytest_cache/
+.mypy_cache/
