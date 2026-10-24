@@ -153,7 +153,12 @@ def get_current_user(
 
     # 2. Support direct header identity in testing if provided with valid email lookup
     if x_user_email:
-        db_user = db.query(User).filter_by(email=x_user_email).first()
+        db_user = None
+        try:
+            db_user = db.query(User).filter_by(email=x_user_email).first()
+        except Exception:
+            db.rollback()
+
         if db_user:
             if not db_user.is_active:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is deactivated.")
@@ -169,6 +174,7 @@ def get_current_user(
                 return AuthenticatedUser(id=999, email=x_user_email, role=role_enum, full_name="Test Principal")
             except ValueError:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid role: {x_user_role}")
+
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

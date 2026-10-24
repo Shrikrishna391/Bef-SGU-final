@@ -45,6 +45,7 @@ class InventoryBatchAdjust(BaseModel):
     reason: str = Field(..., min_length=3, max_length=255, examples=["Physical count reconciliation"])
 
 
+
 class InventoryReservationRead(BaseModel):
     """Schema representing an active, committed, or released inventory reservation."""
     id: int

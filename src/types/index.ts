@@ -192,7 +192,11 @@ export interface PlanRun {
   unmet: UnmetDemand[];
   baselineScores: ComparisonMetrics;
   staleLocations: string[];
+  executiveDispatchBriefing?: string;
+  keyFeatureInsights?: Array<Record<string, any>>;
 }
+
+
 
 export interface SyncEvent {
   eventId: string; // UUID v4

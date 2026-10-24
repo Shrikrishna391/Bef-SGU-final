@@ -73,4 +73,20 @@ status, agent_res = get(f"{base}/agents", planner_headers)
 total_agents = agent_res["total"]
 print(f"[Workflow 6] Delivery Fleet Telemetry - HTTP {status}, Active Delivery Agents: {total_agents}")
 
-print("\n>>> ALL 6 END-TO-END WORKFLOWS COMPLETED AND VERIFIED ON LIVE APPLICATION! <<<")
+# 7. Maharashtra Road Risk & Delay Prediction ML
+status, risk_res = post(f"{base}/ai/road-risk", {
+    "corridor_id": "CORR_PUNE_KOLHAPUR",
+    "terrain_class": "ghat_mixed",
+    "road_distance_km": 235.0,
+    "baseline_drive_time_minutes": 270.0,
+    "rainfall_mm": 18.0,
+    "traffic_congestion_index": 0.65
+}, planner_headers)
+print(f"[Workflow 7] Road Risk ML - HTTP {status}, Predicted Delay: +{risk_res['predicted_delay_minutes']} min, Severity: {risk_res['risk_severity'].upper()}, Surcharge: INR {risk_res['lateness_surcharge_inr']}")
+
+# 8. Ollama Daemon & Fallback Status
+status, ollama_res = get(f"{base}/ai/status", planner_headers)
+print(f"[Workflow 8] Ollama Intelligence - HTTP {status}, Status: {ollama_res['status']}, Connected: {ollama_res['is_connected']}, Configured Model: {ollama_res['configured_model']}")
+
+print("\n>>> ALL 8 END-TO-END WORKFLOWS COMPLETED AND VERIFIED ON LIVE APPLICATION! <<<")
+

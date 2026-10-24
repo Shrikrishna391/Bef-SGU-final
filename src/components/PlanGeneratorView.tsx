@@ -83,8 +83,10 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
   });
 
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isBriefingExpanded, setIsBriefingExpanded] = useState<boolean>(true);
 
   // Helper to show transient toast message
+
   const triggerFeedback = (msg: string) => {
     setActionFeedback(msg);
     setTimeout(() => {
@@ -401,8 +403,104 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
       {/* Section 2: Dashboard Summary KPIs */}
       <PlanKpiCards planRun={planRun} onFilterClick={handleKpiFilterClick} />
 
+      {/* AI Executive Briefing & Ollama Causal Driver Insights */}
+      {planRun && (planRun.executiveDispatchBriefing || (planRun.keyFeatureInsights && planRun.keyFeatureInsights.length > 0)) && (
+        <div className="glass-panel p-5 rounded-2xl border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-slate-900/60 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                <Sparkles className="w-4 h-4 text-indigo-300 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-tight">
+                    Ollama Executive Dispatch Briefing &amp; Causal Intelligence
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    Local LLM Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Synthesized trade-off rationales, inventory risk alerts, and causal drivers for warehouse managers
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsBriefingExpanded(!isBriefingExpanded)}
+              className="text-xs font-semibold text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>{isBriefingExpanded ? 'Collapse' : 'Expand'}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isBriefingExpanded ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {isBriefingExpanded && (
+            <div className="space-y-4 pt-2 border-t border-slate-800/80">
+              {planRun.executiveDispatchBriefing && (
+                <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 text-xs text-slate-300 leading-relaxed font-sans">
+                  {planRun.executiveDispatchBriefing}
+                </div>
+              )}
+
+              {planRun.keyFeatureInsights && planRun.keyFeatureInsights.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Key Causal Drivers &amp; Critical Store Risks
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {planRun.keyFeatureInsights.map((insight, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 hover:border-slate-700 transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-xs text-indigo-300">
+                            {insight.store_id} • {insight.sku_id}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            insight.risk_level === 'CRITICAL' || insight.urgency_rating === 'CRITICAL'
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          }`}>
+                            {insight.risk_level || insight.urgency_rating || 'HIGH RISK'}
+                          </span>
+                        </div>
+                        {insight.product_name && (
+                          <div className="text-xs font-semibold text-white truncate">
+                            {insight.product_name}
+                          </div>
+                        )}
+                        {insight.causal_drivers && insight.causal_drivers.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {insight.causal_drivers.map((driver: string, dIdx: number) => (
+                              <span
+                                key={dIdx}
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700"
+                              >
+                                {driver}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {insight.recommended_action && (
+                          <p className="text-[11px] text-emerald-400 font-medium">
+                            Action: {insight.recommended_action}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Section 3: Toolbar with Search, Filters, and Sorting */}
       <PlanToolbar
+
         filters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}

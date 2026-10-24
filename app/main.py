@@ -30,11 +30,20 @@ async def lifespan(app: FastAPI):
     is_ready, _ = check_db_connection()
     if is_ready:
         logger.info("Authoritative database connectivity verified.")
+        try:
+            import app.models  # noqa: F401
+            from app.db.base import Base
+            from app.db.session import engine
+            Base.metadata.create_all(bind=engine)
+            logger.info("Authoritative database schema initialized.")
+        except Exception as e:
+            logger.warning("Database schema auto-init notice: %s", e)
     else:
         logger.warning(
             "Database connectivity check failed during startup. "
             "Service will start, but readiness checks will fail until DB is online."
         )
+
 
     yield
 

@@ -270,9 +270,12 @@ export const App: React.FC = () => {
             },
           },
           staleLocations: [],
+          executiveDispatchBriefing: result.executive_dispatch_briefing,
+          keyFeatureInsights: result.key_feature_insights,
         };
 
         setPlanRun(newPlan);
+
         setIsGenerating(false);
         return;
       } catch (err) {

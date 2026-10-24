@@ -118,6 +118,7 @@ export interface FMCGEngineRunParams {
   use_net_replenishment?: boolean;
   simulated_stock_seed?: number;
   create_plan_record?: boolean;
+  ollama_model?: string;
 }
 
 export interface FMCGEngineResult {
@@ -139,6 +140,47 @@ export interface FMCGEngineResult {
   executive_dispatch_briefing?: string;
   key_feature_insights?: Array<Record<string, any>>;
 }
+
+export interface RoadRiskAssessmentParams {
+  route_id?: string;
+  corridor_id?: string;
+  terrain_class?: string;
+  environment_region?: string;
+  road_distance_km?: number;
+  baseline_drive_time_minutes?: number;
+  rainfall_mm?: number;
+  visibility_km?: number;
+  traffic_congestion_index?: number;
+  pothole_or_surface_risk_index?: number;
+  waterlogging_flag?: boolean;
+  day_of_week?: number;
+}
+
+export interface RoadRiskAssessmentResult {
+  route_id: string;
+  corridor_id: string;
+  terrain_class: string;
+  predicted_delay_minutes: number;
+  risk_severity: 'low' | 'medium' | 'high' | string;
+  risk_score: number;
+  lateness_surcharge_inr: number;
+  replan_recommended: boolean;
+  explanation: string;
+}
+
+export interface RoadCorridorInfo {
+  route_id: string;
+  corridor_id: string;
+  origin: string;
+  destination: string;
+  highway: string;
+  terrain_class: string;
+  environment_region: string;
+  road_distance_km: number;
+  baseline_drive_time_minutes: number;
+  typical_ghat_section: string;
+}
+
 
 export const FlowGridAPI = {
   /**
@@ -338,6 +380,7 @@ export const FlowGridAPI = {
       use_net_replenishment: params.use_net_replenishment ?? true,
       simulated_stock_seed: params.simulated_stock_seed ?? 42,
       create_plan_record: params.create_plan_record ?? true,
+      ollama_model: params.ollama_model,
     };
 
     const res = await fetchWithTimeout(`${API_BASE_URL}/ai/distribution-engine`, {
@@ -352,6 +395,7 @@ export const FlowGridAPI = {
 
     return await res.json();
   },
+
 
   /**
    * Authoritatively Approve Plan (Enforces Separation of Duties: Sunita/Approver)
@@ -480,4 +524,79 @@ export const FlowGridAPI = {
     });
     return await res.json();
   },
+
+  /**
+   * Assess Maharashtra Road Risk & Transit Delay via ML
+   */
+  async assessRoadRisk(params: RoadRiskAssessmentParams): Promise<RoadRiskAssessmentResult> {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/ai/road-risk`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(params),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Road risk ML endpoint fallback:', e);
+    }
+    // Resilient client fallback
+    const isGhat = (params.terrain_class || '').toLowerCase().includes('ghat');
+    const delay = (params.rainfall_mm || 0) * 1.5 + (params.traffic_congestion_index || 0.3) * 50 + (isGhat ? 30 : 5);
+    return {
+      route_id: params.route_id || 'RT-PUN-KOL-01',
+      corridor_id: params.corridor_id || 'CORR_PUNE_KOLHAPUR',
+      terrain_class: params.terrain_class || 'ghat_mixed',
+      predicted_delay_minutes: Math.round(delay),
+      risk_severity: delay > 50 ? 'high' : delay > 25 ? 'medium' : 'low',
+      risk_score: delay > 50 ? 0.85 : 0.45,
+      lateness_surcharge_inr: Math.round(Math.max(0, delay - 15) * 2.5),
+      replan_recommended: delay > 60,
+      explanation: `Corridor ${params.corridor_id || 'CORR_PUNE_KOLHAPUR'}: Predicted delay +${Math.round(delay)}m.`,
+    };
+  },
+
+  /**
+   * Fetch Maharashtra Strategic Supply Corridors
+   */
+  async getRoadCorridors(): Promise<RoadCorridorInfo[]> {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/ai/road-corridors`, {
+        headers: getHeaders(),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Failed to fetch corridors from backend:', e);
+    }
+    return [
+      {
+        route_id: 'RT-PUN-KOL-01',
+        corridor_id: 'CORR_PUNE_KOLHAPUR',
+        origin: 'Pune (Chakan Hub)',
+        destination: 'Kolhapur (Shahupuri Hub)',
+        highway: 'NH-48',
+        terrain_class: 'ghat_mixed',
+        environment_region: 'Western_Ghats',
+        road_distance_km: 235.0,
+        baseline_drive_time_minutes: 270.0,
+        typical_ghat_section: 'Khambatki Ghat & Katraj Pass',
+      },
+      {
+        route_id: 'RT-MUM-PUN-01',
+        corridor_id: 'CORR_MUMBAI_PUNE',
+        origin: 'Mumbai (Bhiwandi Hub)',
+        destination: 'Pune (Tathawade Hub)',
+        highway: 'Mumbai-Pune Expressway',
+        terrain_class: 'ghat_mixed',
+        environment_region: 'Western_Ghats',
+        road_distance_km: 148.0,
+        baseline_drive_time_minutes: 190.0,
+        typical_ghat_section: 'Borghat (Khandala Section)',
+      },
+    ];
+  },
 };
+

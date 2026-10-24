@@ -83,6 +83,7 @@ class FMCGEngineRunRequest(BaseModel):
     use_net_replenishment: bool = Field(default=True, description="Enable dynamic net replenishment and safety stock")
     simulated_stock_seed: int = Field(default=42, description="Random seed for on-hand store stock simulation")
     create_plan_record: bool = Field(default=True, description="Automatically persist candidate plan in authoritative database")
+    ollama_model: Optional[str] = Field(default=None, description="Optional local Ollama model override (e.g. llama3, mistral, llama3.2)")
 
 
 class FMCGEngineRunResponse(BaseModel):
@@ -95,4 +96,32 @@ class FMCGEngineRunResponse(BaseModel):
     module_4_optimization_dashboard: Dict[str, Any]
     executive_dispatch_briefing: Optional[str] = None
     key_feature_insights: Optional[List[Dict[str, Any]]] = None
+
+
+class RoadRiskAssessmentRequest(BaseModel):
+    route_id: str = Field(default="RT-PUN-KOL-01", description="Route ID")
+    corridor_id: str = Field(default="CORR_PUNE_KOLHAPUR", description="Representative highway corridor ID")
+    terrain_class: str = Field(default="ghat_mixed", description="Terrain classification (plain, ghat_mixed, coastal)")
+    environment_region: str = Field(default="Western_Ghats", description="Environment region")
+    road_distance_km: float = Field(default=235.0, ge=1.0, description="Corridor distance in kilometers")
+    baseline_drive_time_minutes: float = Field(default=270.0, ge=1.0, description="Baseline drive time in minutes")
+    rainfall_mm: float = Field(default=12.5, ge=0.0, description="Rainfall scenario in mm")
+    visibility_km: float = Field(default=6.0, ge=0.0, description="Visibility in km")
+    traffic_congestion_index: float = Field(default=0.45, ge=0.0, le=1.0, description="Congestion index [0.0 - 1.0]")
+    pothole_or_surface_risk_index: float = Field(default=0.35, ge=0.0, le=1.0, description="Pothole/surface risk index [0.0 - 1.0]")
+    waterlogging_flag: bool = Field(default=False, description="Waterlogging flag")
+    day_of_week: int = Field(default=2, ge=0, le=6, description="Day of week (0=Mon, 6=Sun)")
+
+
+class RoadRiskAssessmentResponse(BaseModel):
+    route_id: str
+    corridor_id: str
+    terrain_class: str
+    predicted_delay_minutes: float
+    risk_severity: str
+    risk_score: float
+    lateness_surcharge_inr: float
+    replan_recommended: bool
+    explanation: str
+
 

@@ -25,12 +25,30 @@ from app.schemas.ai import (
     OllamaStatusResponse,
     FMCGEngineRunRequest,
     FMCGEngineRunResponse,
+    RoadRiskAssessmentRequest,
+    RoadRiskAssessmentResponse,
 )
 from app.schemas.decision import CandidatePlanProposal
 from app.services.ollama_service import OllamaService
 from app.services.plan_lifecycle_service import PlanLifecycleService
 
 router = APIRouter(prefix="/ai", tags=["AI & Ollama Intelligence"])
+
+# Cached instance of RoadRiskDelayPredictor
+_road_risk_predictor = None
+
+def get_road_risk_predictor():
+    global _road_risk_predictor
+    if _road_risk_predictor is None:
+        try:
+            from models.road_risk_predictor import RoadRiskDelayPredictor
+            predictor = RoadRiskDelayPredictor(models_dir="saved_models")
+            predictor.load()
+            _road_risk_predictor = predictor
+        except Exception:
+            _road_risk_predictor = None
+    return _road_risk_predictor
+
 
 
 @router.get(
@@ -175,7 +193,7 @@ def run_fmcg_distribution_engine(
     from app.models.enums import PlanStatus, PlanEventType
 
     req = payload or FMCGEngineRunRequest()
-    engine = FMCGDistributionEngine()
+    engine = FMCGDistributionEngine(ollama_model=req.ollama_model or "llama3")
     result = engine.run_distribution_intelligence(
         top_n_skus=req.top_n_skus,
         num_stores=req.num_stores,
@@ -185,6 +203,16 @@ def run_fmcg_distribution_engine(
 
     plan_code = None
     plan_id = None
+
+    exec_briefing = (
+        result.get("executive_dispatch_briefing")
+        or result.get("ollama_intelligence", {}).get("executive_briefing")
+    )
+    feature_insights = (
+        result.get("key_feature_insights")
+        or result.get("ollama_intelligence", {}).get("key_feature_insights")
+        or []
+    )
 
     if req.create_plan_record:
         candidate_allocations = []
@@ -219,7 +247,7 @@ def run_fmcg_distribution_engine(
             candidate_allocations=candidate_allocations,
             decision_service_metadata={
                 "engine": "FMCGDistributionEngine",
-                "executive_briefing": result.get("executive_dispatch_briefing"),
+                "executive_briefing": exec_briefing,
                 "impact_dashboard": result.get("module_4_optimization_dashboard"),
             },
             validation_results={"is_valid": True, "violations_detected": 0},
@@ -253,7 +281,142 @@ def run_fmcg_distribution_engine(
         module_2_demand_prediction=result.get("module_2_demand_prediction", {}),
         module_3_distribution_recommendations=result.get("module_3_distribution_recommendations", []),
         module_4_optimization_dashboard=result.get("module_4_optimization_dashboard", {}),
-        executive_dispatch_briefing=result.get("executive_dispatch_briefing"),
-        key_feature_insights=result.get("key_feature_insights", []),
+        executive_dispatch_briefing=exec_briefing,
+        key_feature_insights=feature_insights,
     )
+
+
+@router.post(
+    "/road-risk",
+    response_model=RoadRiskAssessmentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Predict route transit delay & hazard severity via Maharashtra ML models",
+    description="Evaluates weather, potholes, ghat topography, and congestion to compute delay minutes and dynamic fuel surcharges."
+)
+def assess_route_risk(
+    payload: RoadRiskAssessmentRequest,
+    current_user: AuthenticatedUser = Depends(require_roles(VIEWER_ROLES)),
+) -> RoadRiskAssessmentResponse:
+    predictor = get_road_risk_predictor()
+    if predictor is not None:
+        result = predictor.predict_route_risk(
+            route_id=payload.route_id,
+            corridor_id=payload.corridor_id,
+            terrain_class=payload.terrain_class,
+            environment_region=payload.environment_region,
+            road_distance_km=payload.road_distance_km,
+            baseline_drive_time_minutes=payload.baseline_drive_time_minutes,
+            rainfall_mm=payload.rainfall_mm,
+            visibility_km=payload.visibility_km,
+            traffic_congestion_index=payload.traffic_congestion_index,
+            pothole_or_surface_risk_index=payload.pothole_or_surface_risk_index,
+            waterlogging_flag=payload.waterlogging_flag,
+            day_of_week=payload.day_of_week,
+        )
+        return RoadRiskAssessmentResponse(**result)
+
+    # Resilient heuristic fallback
+    is_ghat = 1 if "ghat" in payload.terrain_class.lower() else 0
+    pred_delay = (payload.rainfall_mm * 1.5) + (payload.traffic_congestion_index * 60.0) + (is_ghat * 25.0)
+    sev = "high" if (payload.rainfall_mm > 25.0 or payload.waterlogging_flag) else ("medium" if is_ghat or payload.rainfall_mm > 10.0 else "low")
+    extra_delay = max(0.0, pred_delay - 15.0)
+    lateness_surcharge = round(extra_delay * 2.50 + (350.0 if is_ghat and payload.rainfall_mm > 5.0 else 0.0), 2)
+    replan = pred_delay >= 60.0 or sev == "high" or payload.waterlogging_flag
+
+    return RoadRiskAssessmentResponse(
+        route_id=payload.route_id,
+        corridor_id=payload.corridor_id,
+        terrain_class=payload.terrain_class,
+        predicted_delay_minutes=round(pred_delay, 1),
+        risk_severity=sev,
+        risk_score=0.85 if sev == "high" else 0.45,
+        lateness_surcharge_inr=lateness_surcharge,
+        replan_recommended=replan,
+        explanation=f"Corridor {payload.corridor_id} ({payload.terrain_class}): Fallback assessment with +{round(pred_delay, 1)}m delay."
+    )
+
+
+@router.get(
+    "/road-corridors",
+    summary="List key Maharashtra highway corridors with baseline topography and transit metrics",
+    description="Returns pre-calibrated Maharashtra supply routes across Mumbai, Pune, Kolhapur, Nashik, Aurangabad, and Nagpur."
+)
+def get_road_corridors(
+    current_user: AuthenticatedUser = Depends(require_roles(VIEWER_ROLES)),
+):
+    return [
+        {
+            "route_id": "RT-PUN-KOL-01",
+            "corridor_id": "CORR_PUNE_KOLHAPUR",
+            "origin": "Pune (Chakan Hub)",
+            "destination": "Kolhapur (Shahupuri Hub)",
+            "highway": "NH-48",
+            "terrain_class": "ghat_mixed",
+            "environment_region": "Western_Ghats",
+            "road_distance_km": 235.0,
+            "baseline_drive_time_minutes": 270.0,
+            "typical_ghat_section": "Khambatki Ghat & Katraj Pass"
+        },
+        {
+            "route_id": "RT-MUM-PUN-01",
+            "corridor_id": "CORR_MUMBAI_PUNE",
+            "origin": "Mumbai (Bhiwandi Hub)",
+            "destination": "Pune (Tathawade Hub)",
+            "highway": "Mumbai-Pune Expressway",
+            "terrain_class": "ghat_mixed",
+            "environment_region": "Western_Ghats",
+            "road_distance_km": 148.0,
+            "baseline_drive_time_minutes": 190.0,
+            "typical_ghat_section": "Borghat (Khandala Section)"
+        },
+        {
+            "route_id": "RT-MUM-NAS-01",
+            "corridor_id": "CORR_MUMBAI_NASHIK",
+            "origin": "Mumbai (Bhiwandi Hub)",
+            "destination": "Nashik (Ambad Hub)",
+            "highway": "NH-160",
+            "terrain_class": "ghat_mixed",
+            "environment_region": "Western_Ghats",
+            "road_distance_km": 165.0,
+            "baseline_drive_time_minutes": 210.0,
+            "typical_ghat_section": "Kasara Ghat (Thal Ghat)"
+        },
+        {
+            "route_id": "RT-PUN-SOL-01",
+            "corridor_id": "CORR_PUNE_SOLAPUR",
+            "origin": "Pune (Hadapsar Hub)",
+            "destination": "Solapur (MIDC Hub)",
+            "highway": "NH-65",
+            "terrain_class": "plain",
+            "environment_region": "Marathwada_Plains",
+            "road_distance_km": 252.0,
+            "baseline_drive_time_minutes": 280.0,
+            "typical_ghat_section": "None (Deccan Plateau)"
+        },
+        {
+            "route_id": "RT-PUN-AUR-01",
+            "corridor_id": "CORR_PUNE_AURANGABAD",
+            "origin": "Pune (Wagholi Hub)",
+            "destination": "Chhatrapati Sambhajinagar (Shendra)",
+            "highway": "SH-27 / NH-753F",
+            "terrain_class": "plain",
+            "environment_region": "Marathwada_Plains",
+            "road_distance_km": 235.0,
+            "baseline_drive_time_minutes": 290.0,
+            "typical_ghat_section": "Ahmednagar Bypass"
+        },
+        {
+            "route_id": "RT-MUM-RAT-01",
+            "corridor_id": "CORR_MUMBAI_RATNAGIRI",
+            "origin": "Mumbai (Panvel Hub)",
+            "destination": "Ratnagiri (Mirjole Hub)",
+            "highway": "NH-66",
+            "terrain_class": "coastal",
+            "environment_region": "Konkan_Coast",
+            "road_distance_km": 330.0,
+            "baseline_drive_time_minutes": 420.0,
+            "typical_ghat_section": "Kashedi Ghat & Parshuram Ghat"
+        }
+    ]
+
 
