@@ -1,12 +1,8 @@
 """
 FlowGrid: AI-Powered Distribution Intelligence & Inventory Optimization Engine
 Unified Pipeline Runner & Sanity Checker
-Demonstrates end-to-end execution across:
-1. Seasonal-Naive Baseline
-2. Random Forest Regressor
-3. LightGBM Regressor
-4. Isolation Forest Anomaly Detector
-5. Google OR-Tools CP-SAT Optimizer
+Trains the PRD-aligned seven-day quantile forecaster, then runs anomaly,
+inventory allocation, Maharashtra road-risk, and dispatch workflows.
 """
 
 import os
@@ -15,80 +11,88 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from models.feature_pipeline import FeaturePipeline
-from models.demand_forecaster import DemandForecaster
 from models.anomaly_detector import AnomalyDetector
 from models.stock_optimizer import DistributionOptimizer
-from models.neural_demand_forecaster import NeuralDemandForecaster
+from models.weekly_quantile_forecaster import WeeklyQuantileForecaster
 
 
-def run_full_pipeline(csv_path: str = "synthetic_sales_daily.csv", output_dir: str = "saved_models"):
+def run_full_pipeline(csv_path: str = "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv", output_dir: str = "saved_models"):
     print("=" * 80)
     print(" FlowGrid Distribution Engine: ML & Optimization Pipeline Execution")
     print("=" * 80)
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # 1. Load Data
-    if not os.path.exists(csv_path):
-        for candidate in [
-            "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv",
-            "unused_data/synthetic_sales_daily.csv",
-            "../flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
-        ]:
-            if os.path.exists(candidate):
-                csv_path = candidate
-                break
+    # 1. Load precomputed chronological splits. Their lag features are built
+    # from strictly earlier rows, and validation/test dates are shared across
+    # all store-SKU series.
+    requested_path = os.path.abspath(csv_path)
+    candidate_dirs = [
+        os.path.join(os.path.dirname(requested_path), "model_ready"),
+        os.path.join("flowgrid_flipkart_100sku", "data", "model_ready"),
+        os.path.join("unused_data"),
+    ]
+    model_ready_dir = next((d for d in candidate_dirs if all(
+        os.path.exists(os.path.join(d, f"{split}.csv")) for split in ("train", "validation", "test")
+    )), None)
+    if model_ready_dir is None:
+        raise FileNotFoundError("Leakage-aware train/validation/test CSVs not found. Expected flowgrid_flipkart_100sku/data/model_ready.")
 
-    print(f"\n[1/6] Loading Daily Sales Dataset: {csv_path}...")
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"Dataset {csv_path} not found.")
+    print(f"\n[1/6] Loading leakage-aware sales splits: {model_ready_dir}...")
+    dtypes = {c: "category" for c in ["store_id", "sku_id", "weekday"]}
+    for c in ["units_sold", "day_of_week", "month", "is_weekend", "synthetic_promo_flag", "promo_feature_available", "unit_price_imputed"]:
+        dtypes[c] = "float32"
+    feature_cols = [
+        "store_id", "sku_id", "weekday", "unit_price", "day_of_week", "month", "is_weekend",
+        "synthetic_promo_flag", "promo_feature_available", "unit_price_imputed",
+        "lag_1", "lag_7", "lag_14", "lag_28", "rolling_mean_7", "rolling_mean_28",
+        "rolling_std_7", "rolling_std_28"
+    ]
+    split_frames = {name: pd.read_csv(os.path.join(model_ready_dir, f"{name}.csv"), dtype=dtypes)
+                    for name in ("train", "validation", "test")}
+    train_df, validation_df, test_df = (split_frames[name] for name in ("train", "validation", "test"))
+    for name, frame in split_frames.items():
+        missing = sorted(set(feature_cols + ["date", "units_sold"]) - set(frame.columns))
+        if missing:
+            raise ValueError(f"{name} split is missing required model columns: {missing}")
+    print(f"      Rows: train={len(train_df):,}, validation={len(validation_df):,}, test={len(test_df):,}")
+    print(f"      Train dates: {train_df['date'].min()} to {train_df['date'].max()}")
+    print(f"      Validation dates: {validation_df['date'].min()} to {validation_df['date'].max()}")
+    print(f"      Test dates: {test_df['date'].min()} to {test_df['date'].max()}")
 
-    raw_df = pd.read_csv(csv_path)
-    print(f"      Rows loaded: {len(raw_df):,}")
-    print(f"      Stores: {raw_df['store_id'].nunique()}, SKUs: {raw_df['sku_id'].nunique()}")
-    print(f"      Date span: {raw_df['date'].min()} to {raw_df['date'].max()}")
-
-    # 2. Feature Engineering (Zero Data Leakage)
-    print("\n[2/6] Engineering Features & Enforcing Chronological Split...")
-    pipeline = FeaturePipeline(lag_days=[1, 2, 7, 14, 28], rolling_windows=[7, 14, 28])
-    processed_df = pipeline.fit_transform(raw_df)
-    train_df, test_df = pipeline.split_chronological(processed_df, holdout_days=30)
-    
-    print(f"      Feature columns: {len(pipeline.feature_columns)}")
-    print(f"      Train samples:   {len(train_df):,} (up to {train_df['date'].max().strftime('%Y-%m-%d')})")
-    print(f"      Holdout samples: {len(test_df):,} (last 30 days: {test_df['date'].min().strftime('%Y-%m-%d')} to {test_df['date'].max().strftime('%Y-%m-%d')})")
-
-    # 3. Demand Forecasting Model Training
-    print("\n[3/6] Training & Evaluating Demand Forecasting Models...")
-    forecaster = DemandForecaster(target_col="units_sold")
-
-    print("      --> Fitting RandomForestRegressor (PRD FR-P0-02 Baseline ML)...")
-    forecaster.train_random_forest(train_df, pipeline.feature_columns)
-
-    print("      --> Fitting LightGBM Regressor (High-Accuracy Forecaster)...")
-    forecaster.train_lightgbm(train_df, pipeline.feature_columns)
-
-    print("      --> Benchmarking against Seasonal-Naive on 30-day Holdout Set...")
-    metrics = forecaster.evaluate_all(test_df)
-
-    for m_name, m_vals in metrics.items():
-        print(f"         * {m_name.upper():<16} | WAPE: {m_vals['wape']*100:.2f}% | MAE: {m_vals['mae']:.2f} | RMSE: {m_vals['rmse']:.2f} | R2: {m_vals['r2']:.4f}")
-
-    # 4. Enforce PRD 5% Relative WAPE Decision Gate
-    print("\n[4/6] Evaluating PRD FR-P0-02 Decision Guard (5% WAPE Gate)...")
-    active_model = forecaster.enforce_prd_decision_gate()
-    audit = forecaster.decision_audit
-    print(f"      Result: {audit['status']}")
-    print(f"      Active Model Selected: {active_model.upper()}")
-    print(f"      Audit Explanation:     {audit['reason']}")
+    # 2. Train and score the PRD weekly quantile forecaster on full daily history.
+    print("\n[2/6] Training PRD weekly quantile forecaster...")
+    sales_path = os.path.join(os.path.dirname(os.path.abspath(csv_path)), "synthetic_sales_daily.csv")
+    if not os.path.exists(sales_path):
+        sales_path = "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
+    sales_history = pd.read_csv(sales_path)
+    weekly_forecaster = WeeklyQuantileForecaster()
+    weekly_report = weekly_forecaster.forecast(sales_history)
+    WeeklyQuantileForecaster.save(weekly_report, os.path.join(output_dir, "weekly_forecast_report.json"))
+    weekly_accuracy = weekly_report["accuracy"]
+    advanced_used = bool(weekly_accuracy["advanced_model_used"])
+    audit = {
+        "active_model": "hist_gradient_boosting_quantiles" if advanced_used else "four_week_moving_average",
+        "status": "APPROVED_BY_WEEKLY_VALIDATION" if advanced_used else "BASELINE_RETAINED",
+        "validation_wape": weekly_accuracy["validation_advanced_wape"] if advanced_used else weekly_accuracy["validation_baseline_wape"],
+        "holdout_wape": weekly_accuracy["wape"],
+        "holdout_bias": weekly_accuracy["bias"],
+        "holdout_coverage95": weekly_accuracy["coverage"]["q95"],
+        "reason": "Gradient boosting beat the four-week baseline on the validation week." if advanced_used else "Four-week baseline was more accurate on the validation week."
+    }
+    print(f"      Validation baseline WAPE: {weekly_accuracy['validation_baseline_wape']}")
+    print(f"      Validation advanced WAPE: {weekly_accuracy['validation_advanced_wape']}")
+    print(f"      Untouched holdout WAPE:   {weekly_accuracy['wape']}")
+    print(f"      Holdout q95 coverage:     {weekly_accuracy['coverage']['q95']}")
+    print(f"      Active method:            {audit['active_model']}")
+    train_validation_df = pd.concat([train_df, validation_df], ignore_index=True)
 
     # 5. Anomaly Detection & Demand Shock Filtering
     print("\n[5/6] Training Isolation Forest for Outlier & Demand Shock Detection...")
     anomaly_detector = AnomalyDetector(contamination=0.01)
     # Features for anomaly: sales deviation, price, promo, lags
-    anomaly_features = ['unit_price', 'price_ratio', 'synthetic_promo_flag', 'lag_1', 'lag_7', 'rolling_mean_7', 'rolling_std_7']
-    anomaly_detector.fit(train_df, anomaly_features)
+    anomaly_features = ['unit_price', 'synthetic_promo_flag', 'lag_1', 'lag_7', 'rolling_mean_7', 'rolling_std_7']
+    anomaly_detector.fit(train_validation_df, anomaly_features)
     anomaly_metrics = anomaly_detector.evaluate(test_df, ground_truth_col="synthetic_anomaly_flag")
 
     print(f"      Detected Anomalies in Holdout: {anomaly_metrics.get('detected_anomalies_count', 0)}")
@@ -103,7 +107,14 @@ def run_full_pipeline(csv_path: str = "synthetic_sales_daily.csv", output_dir: s
     latest_slice = test_df[test_df['date'] == latest_date].copy()
     
     # Generate predicted demand vector using the active winning model
-    predicted_demand_vals = forecaster.predict(latest_slice)
+    weekly_by_pair = {
+        (str(row["retailerId"]), str(row["sku"])): row
+        for row in weekly_report["forecasts"]
+    }
+    predicted_demand_vals = np.array([
+        weekly_by_pair.get((str(row.store_id), str(row.sku_id)), {}).get("q50", 0)
+        for row in latest_slice.itertuples()
+    ], dtype=int)
     latest_slice['predicted_demand'] = predicted_demand_vals
 
     # Create prototype network: 3 Warehouses, 10 Stores, 10 SKUs (as specified in PRD §1)
@@ -164,33 +175,55 @@ def run_full_pipeline(csv_path: str = "synthetic_sales_daily.csv", output_dir: s
     print(f"      Solver Wall Time:        {opt_result['wall_time_seconds']}s")
     print(f"      Constraint Violations:   {opt_result['violations_detected']} (Guaranteed 0)")
 
-    # 7. 3x Neural Loop Engineering & Multi-Round Backpropagation
-    print("\n[7/7] Executing 3x Neural Loop Engineering (DeepDemandNet PyTorch Backprop)...")
-    neural_forecaster = NeuralDemandForecaster()
-    neural_history = neural_forecaster.train_3x_loop_engineering(
-        train_df=train_df,
-        val_df=test_df,
-        batch_size=256,
-        epochs_per_cycle=2,
-        verbose=True
-    )
-    neural_path = os.path.join(output_dir, "deep_demand_net.pt")
-    neural_forecaster.save(neural_path)
-    wb_summary = neural_forecaster.get_weight_bias_summary()
-    print(f"      Trainable Parameters: {wb_summary.get('total_trainable_parameters', 0):,}")
-    print(f"      Final Weight Norm ||W||: {wb_summary.get('weight_l2_norm', 0.0):.4f}")
-    print(f"      Final Bias Norm ||b||:   {wb_summary.get('bias_l2_norm', 0.0):.4f}")
+    # 7. Maharashtra Roadway Risk & Transit Delay Predictor Training
+    print("\n[7/8] Training Maharashtra Roadway Risk & Transit Delay Predictor (11,880 route records)...")
+    from models.maharashtra_roadways_loader import MaharashtraRoadwaysLoader
+    from models.road_risk_predictor import RoadRiskDelayPredictor
+    from models.deep_roadway_dispatch_net import NeuralRoadwayDispatchTrainer
+    from models.decision_guard import MaharashtraDecisionGuard
 
-    # 8. Verification & Serialization
-    forecaster_path = os.path.join(output_dir, "demand_forecaster.joblib")
+    m_loader = MaharashtraRoadwaysLoader()
+    df_risk = m_loader.build_road_risk_training_features()
+    road_predictor = RoadRiskDelayPredictor(models_dir=output_dir)
+    road_metrics = road_predictor.train(df_risk)
+    print(f"      Delay MAE: {road_metrics['lgbm_delay_mae_minutes']}m | R2: {road_metrics['lgbm_r2_score']} | WAPE Imp: +{road_metrics['relative_wape_improvement_percent']}%")
+    print(f"      Hazard Accuracy: {road_metrics['hazard_classification_accuracy_percent']}% | PRD Gate: {'PASSED' if road_metrics['meets_prd_5pct_gate'] else 'FAILED'}")
+
+    # 8. Maharashtra dispatch model and dynamic decision guard
+    print("\n[8/8] Training Maharashtra dispatch model (14,542 lines)...")
+    df_dispatch = m_loader.build_delivery_dispatch_training_features()
+    m_trainer = NeuralRoadwayDispatchTrainer(models_dir=output_dir)
+    m_summary = m_trainer.train_3x_loops(df_dispatch, epochs_per_loop=2)
+    print(f"      Total Weights Delta ||W||: {m_summary['total_weight_delta']:+.4f}")
+    print(f"      Total Biases Delta ||b||:   {m_summary['total_bias_delta']:+.4f}")
+    print(f"      Best Validation WAPE:       {m_summary['best_val_wape_percent']:.2f}%")
+
+    # Audit Decision Guard
+    guard = MaharashtraDecisionGuard()
+    df_cases = m_loader.load_decision_guard_test_cases()
+    guard_report = guard.run_fixture_test_cases(df_cases)
+    print(f"      Maharashtra Decision Guard: {guard_report['passed_test_cases']}/{guard_report['total_test_cases']} Passed ({guard_report['pass_rate_percent']}%)")
+
+    # Verification & Serialization
     anomaly_path = os.path.join(output_dir, "anomaly_detector.joblib")
-    forecaster.save(forecaster_path)
     anomaly_detector.save(anomaly_path)
 
     summary_report = {
         "execution_timestamp": datetime.now().isoformat(),
-        "forecasting_metrics": metrics,
+        "forecasting_metrics": {
+            "weekly_quantile_forecaster": {
+                "wape": weekly_accuracy["wape"],
+                "bias": weekly_accuracy["bias"],
+                "coverage95": weekly_accuracy["coverage"]["q95"],
+            }
+        },
+        "validation_forecasting_metrics": {
+            "baseline_wape": weekly_accuracy["validation_baseline_wape"],
+            "advanced_wape": weekly_accuracy["validation_advanced_wape"],
+            "advanced_selected": advanced_used,
+        },
         "decision_audit": audit,
+        "weekly_forecast_report": "weekly_forecast_report.json",
         "anomaly_metrics": anomaly_metrics,
         "optimizer_summary": {
             "solver_status": opt_result['solver_status'],
@@ -201,11 +234,10 @@ def run_full_pipeline(csv_path: str = "synthetic_sales_daily.csv", output_dir: s
             "modeled_transport_cost": opt_result['modeled_transport_cost'],
             "wall_time_seconds": opt_result['wall_time_seconds']
         },
-        "neural_loop_engineering": {
-            "model_architecture": "DeepDemandNet (Entity Embeddings + Residual MLP + Softplus)",
-            "cycles_completed": len(neural_history),
-            "cycle_history": neural_history,
-            "weight_bias_summary": wb_summary
+        "maharashtra_roadways_intelligence": {
+            "road_risk_metrics": road_metrics,
+            "deep_roadway_dispatch_summary": m_summary,
+            "decision_guard_compliance": guard_report["pass_rate_percent"]
         }
     }
 
@@ -214,10 +246,11 @@ def run_full_pipeline(csv_path: str = "synthetic_sales_daily.csv", output_dir: s
         json.dump(summary_report, f, indent=2)
 
     print(f"\n[Artifacts Saved]")
-    print(f"   -> Forecaster model:     {forecaster_path}")
-    print(f"   -> Anomaly model:        {anomaly_path}")
-    print(f"   -> PyTorch Neural Net:   {neural_path}")
-    print(f"   -> Summary report:       {report_path}")
+    print(f"   -> Weekly forecast report: {os.path.join(output_dir, 'weekly_forecast_report.json')}")
+    print(f"   -> Anomaly model:          {anomaly_path}")
+    print(f"   -> Road Risk ML Model:     {os.path.join(output_dir, 'road_risk_delay_model.joblib')}")
+    print(f"   -> Deep Dispatch Net:      {os.path.join(output_dir, 'deep_roadway_dispatch_net.pt')}")
+    print(f"   -> Summary report:         {report_path}")
     print("\n" + "=" * 80)
     print(" Pipeline Execution Completed Successfully with ZERO Faulty Outputs!")
     print("=" * 80)

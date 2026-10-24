@@ -154,11 +154,16 @@ class DemandForecaster:
         y_train = sample_df[self.target_col].values.astype(float)
 
         self.lgb_model = lgb.LGBMRegressor(
-            n_estimators=250,
-            learning_rate=0.04,
+            objective="regression_l1",
+            n_estimators=450,
+            learning_rate=0.035,
             num_leaves=31,
+            min_child_samples=30,
             subsample=0.8,
+            subsample_freq=1,
             colsample_bytree=0.8,
+            reg_lambda=1.0,
+            max_bin=127,
             random_state=42,
             verbose=-1
         )

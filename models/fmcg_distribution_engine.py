@@ -23,8 +23,7 @@ import numpy as np
 from .data_loader import FlowGridDataLoader
 from .inventory_optimizer import InventoryOptimizer
 from .stock_optimizer import DistributionOptimizer
-from .demand_forecaster import DemandForecaster
-from .neural_demand_forecaster import NeuralDemandForecaster
+from .weekly_quantile_forecaster import WeeklyQuantileForecaster
 from .ollama_intelligence import OllamaIntelligenceAdapter
 
 
@@ -45,17 +44,7 @@ class FMCGDistributionEngine:
             time_limit_seconds=6.0
         )
         self.ollama = OllamaIntelligenceAdapter(model=ollama_model)
-        self.forecaster = None
-        self._load_forecaster()
-
-    def _load_forecaster(self):
-        """Loads serialized forecaster from saved_models directory if available."""
-        forecaster_path = os.path.join(self.models_dir, "demand_forecaster.joblib")
-        if os.path.exists(forecaster_path):
-            try:
-                self.forecaster = DemandForecaster.load(forecaster_path)
-            except Exception:
-                self.forecaster = None
+        self.weekly_forecast_report = None
 
     def run_distribution_intelligence(
         self,
@@ -143,7 +132,14 @@ class FMCGDistributionEngine:
             "total_forecasted_units": sum(forecasted_demand.values()),
             "total_net_replenishment_units": sum(solver_demand.values()),
             "store_sku_forecasts_count": len(forecasted_demand),
-            "forecasting_model_used": "Active Production Forecaster (Trained on Flipkart FMCG Daily Sales)"
+            "forecasting_model_used": "PRD weekly quantile forecaster (q50; 7-day demand)",
+            "forecast_cycle_start": str(pd.Timestamp((self.weekly_forecast_report or {}).get("history_end")).date() + pd.Timedelta(days=1)) if self.weekly_forecast_report else None,
+            "forecast_holdout_accuracy": (self.weekly_forecast_report or {}).get("accuracy", {}),
+            "forecasts": [
+                {"retailerId": store, "sku": sku, **self.weekly_forecast_by_pair[(str(store), str(sku))]}
+                for store, sku in forecasted_demand
+                if (str(store), str(sku)) in self.weekly_forecast_by_pair
+            ]
         }
 
         recommendations_table = opt_solution.get("distribution_recommendations", [])
@@ -206,20 +202,36 @@ class FMCGDistributionEngine:
         stores: List[str],
         skus: List[str]
     ) -> Dict[Tuple[str, str], int]:
-        """Generates realistic daily/weekly demand per store-SKU using trained models or realistic FMCG baseline."""
-        demand = {}
-        np.random.seed(42)
+        """Uses the PRD model's median seven-day total for each retailer/SKU."""
+        import json
+        from pathlib import Path
 
-        # Base category demand expectations in FMCG packets
-        for s in stores:
-            for k in skus:
-                # Deterministic pseudo-realistic baseline if forecaster feature matrix not loaded
-                sku_num = int(k.replace("SKU-", "")) if "SKU-" in k else 1
-                base_lam = 15.0 + (sku_num % 10) * 4.0
-                d_val = int(np.random.poisson(lam=base_lam))
-                demand[(s, k)] = max(5, d_val)
+        if self.weekly_forecast_report is None:
+            sales = self.loader.load_sales_history()
+            report_path = Path(self.models_dir) / "weekly_forecast_report.json"
+            report = None
+            if report_path.exists():
+                try:
+                    cached = json.loads(report_path.read_text(encoding="utf-8"))
+                    if (cached.get("model_version") == "weekly-quantile-v1"
+                            and cached.get("history_end") == str(pd.to_datetime(sales["date"]).max().date())):
+                        report = cached
+                except (OSError, ValueError, TypeError):
+                    report = None
+            if report is None:
+                report = WeeklyQuantileForecaster().forecast(sales)
+                WeeklyQuantileForecaster.save(report, str(report_path))
+            self.weekly_forecast_report = report
 
-        return demand
+        by_pair = {
+            (str(row["retailerId"]), str(row["sku"])): row
+            for row in self.weekly_forecast_report.get("forecasts", [])
+        }
+        self.weekly_forecast_by_pair = by_pair
+        return {
+            (store, sku): int(by_pair.get((str(store), str(sku)), {}).get("q50", 0))
+            for store in stores for sku in skus
+        }
 
     def _build_inventory_dashboard(
         self,

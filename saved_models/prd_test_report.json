@@ -5,19 +5,19 @@
     "total": 6
   },
   "pass_rate_pct": 100.0,
-  "timestamp": "2026-10-24T22:29:09.551139",
+  "timestamp": "2026-10-25T00:10:18.488524",
   "results": {
     "FR-P0-01": {
       "title": "Data Ingestion, Sanitization & Zero-Leakage Split",
       "prd_reference": "PRD Sec. 6.1 FR-P0-01 & Sec. 13.1",
       "status": "PASSED",
-      "timestamp": "2026-10-24T22:29:09.240605",
+      "timestamp": "2026-10-25T00:10:18.043787",
       "details": {
         "rows_evaluated": 1095000,
         "columns_verified": [
-          "date",
           "sku_id",
           "store_id",
+          "date",
           "units_sold",
           "unit_price"
         ],
@@ -32,7 +32,7 @@
       "title": "Demand Forecasting & 5% Relative WAPE Decision Gate",
       "prd_reference": "PRD Sec. 6.1 FR-P0-02 & Sec. 12",
       "status": "PASSED",
-      "timestamp": "2026-10-24T22:29:09.251876",
+      "timestamp": "2026-10-25T00:10:18.055339",
       "details": {
         "baseline_wape_pct": 21.95,
         "winning_model_wape_pct": 14.99,
@@ -46,7 +46,7 @@
       "title": "Constraint-Aware Allocation & Zero Hard Violations",
       "prd_reference": "PRD Sec. 6.1 FR-P0-03 & Sec. 12 (100% Target)",
       "status": "PASSED",
-      "timestamp": "2026-10-24T22:29:09.270824",
+      "timestamp": "2026-10-25T00:10:18.077622",
       "details": {
         "solver_status": "OPTIMAL",
         "total_demand": 205,
@@ -61,7 +61,7 @@
       "title": "Optimization Benefit: Controlled Scenarios vs Static Baseline",
       "prd_reference": "PRD Sec. 12 (>=5% Lower Objective in >=2 of 3 Scenarios)",
       "status": "PASSED",
-      "timestamp": "2026-10-24T22:29:09.427447",
+      "timestamp": "2026-10-25T00:10:18.286293",
       "details": {
         "scenarios_evaluated": 3,
         "scenarios_meeting_5pct_target": 2,
@@ -98,7 +98,7 @@
       "title": "Anomaly Detection & Shock Replanning Response",
       "prd_reference": "PRD Sec. 6.1 FR-P0-05 & Sec. 6.2 FR-P1-04",
       "status": "PASSED",
-      "timestamp": "2026-10-24T22:29:09.526994",
+      "timestamp": "2026-10-25T00:10:18.473969",
       "details": {
         "shock_identified": true,
         "outlier_clamping_verified": true,
@@ -110,9 +110,9 @@
       "title": "Audit Traceability & Solver Latency Compliance",
       "prd_reference": "PRD Sec. 6.1 FR-P0-11 & Sec. 11 (Latency <= 10s)",
       "status": "PASSED",
-      "timestamp": "2026-10-24T22:29:09.551139",
+      "timestamp": "2026-10-25T00:10:18.488524",
       "details": {
-        "solver_wall_time_s": 0.018,
+        "solver_wall_time_s": 0.008,
         "max_allowed_time_s": 10.0,
         "decision_records_traceable": true,
         "solver_status": "OPTIMAL"

@@ -49,10 +49,15 @@ class FeaturePipeline:
         data['sin_month'] = np.sin(2 * np.pi * data['month'] / 12.0)
         data['cos_month'] = np.cos(2 * np.pi * data['month'] / 12.0)
 
-        # 3. Price & Promo Features
-        # Safe normalization per SKU
-        sku_mean_price = data.groupby('sku_id')['unit_price'].transform('mean')
-        data['price_ratio'] = data['unit_price'] / np.maximum(sku_mean_price, 1e-4)
+        # 3. Price & Promo Features. Normalize against prior prices only so
+        # future prices cannot affect historical or holdout features.
+        prior_sku_price = data.groupby(['store_id', 'sku_id'], sort=False)['unit_price'].transform(
+            lambda values: values.shift(1).expanding(min_periods=1).mean()
+        )
+        data['price_ratio'] = data['unit_price'] / prior_sku_price.replace(0, np.nan)
+        data['price_ratio'] = data['price_ratio'].replace([np.inf, -np.inf], np.nan).fillna(1.0)
+        if 'synthetic_promo_flag' not in data.columns:
+            data['synthetic_promo_flag'] = 0
         data['synthetic_promo_flag'] = data['synthetic_promo_flag'].fillna(0).astype(int)
 
         # 4. Strictly Past Lag Features (Shifted by store and SKU)
@@ -72,15 +77,13 @@ class FeaturePipeline:
                 lambda x: x.rolling(w, min_periods=1).std()
             ).fillna(0.0)
 
-        # 6. Fallback Imputation for initial warmup rows
-        # For initial rows where lag_28 is NaN, fallback to nearest available lag or group median
+        # 6. Warmup rows have no past observations. Use neutral zero values;
+        # whole-series means/medians would leak future target information.
         for lag in self.lag_days:
-            fallback = data.groupby('sku_id')['units_sold'].transform('median')
-            data[f'lag_{lag}'] = data[f'lag_{lag}'].fillna(fallback)
+            data[f'lag_{lag}'] = data[f'lag_{lag}'].fillna(0.0)
 
         for w in self.rolling_windows:
-            fallback_mean = data.groupby('sku_id')['units_sold'].transform('mean')
-            data[f'rolling_mean_{w}'] = data[f'rolling_mean_{w}'].fillna(fallback_mean)
+            data[f'rolling_mean_{w}'] = data[f'rolling_mean_{w}'].fillna(0.0)
             data[f'rolling_std_{w}'] = data[f'rolling_std_{w}'].fillna(0.0)
 
         # 7. Record feature column list
@@ -121,6 +124,8 @@ class FeaturePipeline:
         Splits data chronologically into train and holdout sets.
         Completely prevents future leakage into the training set.
         """
+        df = df.copy()
+        df['date'] = pd.to_datetime(df['date'])
         df = df.sort_values('date').reset_index(drop=True)
         max_date = df['date'].max()
         split_date = max_date - pd.Timedelta(days=holdout_days)

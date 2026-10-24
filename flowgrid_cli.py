@@ -26,7 +26,7 @@ from typing import Dict, Any, List
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models.feature_pipeline import FeaturePipeline
-from models.demand_forecaster import DemandForecaster
+from models.weekly_quantile_forecaster import WeeklyQuantileForecaster
 from models.anomaly_detector import AnomalyDetector
 from models.stock_optimizer import DistributionOptimizer
 from models.static_baseline import StaticAllocationBaseline
@@ -35,6 +35,10 @@ from models.neural_demand_forecaster import NeuralDemandForecaster
 from models.inventory_optimizer import InventoryOptimizer
 from models.fmcg_distribution_engine import FMCGDistributionEngine
 from models.ollama_intelligence import OllamaIntelligenceAdapter
+from models.maharashtra_roadways_loader import MaharashtraRoadwaysLoader
+from models.road_risk_predictor import RoadRiskDelayPredictor
+from models.deep_roadway_dispatch_net import DeepRoadwayDispatchNet, NeuralRoadwayDispatchTrainer
+from models.decision_guard import MaharashtraDecisionGuard
 from prd_test_suite import PRDTestSuite, safe_json_default
 
 
@@ -110,25 +114,24 @@ def cmd_status(args):
         route_count = 90
         veh_count = 15
 
-    # Check model artifacts
-    forecaster_path = os.path.join(models_dir, "demand_forecaster.joblib")
+    # Check current PRD weekly forecast report and anomaly model.
+    forecaster_path = os.path.join(models_dir, "weekly_forecast_report.json")
     anomaly_path = os.path.join(models_dir, "anomaly_detector.joblib")
-    summary_path = os.path.join(models_dir, "pipeline_summary_report.json")
 
     has_forecaster = os.path.exists(forecaster_path)
     has_anomaly = os.path.exists(anomaly_path)
-    has_summary = os.path.exists(summary_path)
 
-    active_model = "Seasonal-Naive (default)"
-    best_wape = "14.99%"
-    if has_summary:
+    active_model = "Four-week moving average"
+    best_wape = "N/A"
+    if has_forecaster:
         try:
-            with open(summary_path) as f:
+            with open(forecaster_path, encoding="utf-8") as f:
                 rep = json.load(f)
-                active_model = rep.get("decision_audit", {}).get("active_model", active_model).upper()
-                w_val = rep.get("decision_audit", {}).get("active_model_wape")
-                if w_val:
-                    best_wape = f"{w_val*100:.2f}%"
+            accuracy = rep.get("accuracy", {})
+            active_model = "HistGradientBoosting quantiles" if accuracy.get("advanced_model_used") else "Four-week moving average"
+            w_val = accuracy.get("wape")
+            if w_val is not None:
+                best_wape = f"{w_val*100:.2f}%"
         except Exception:
             pass
 
@@ -196,70 +199,84 @@ def cmd_forecast(args):
     print(Style.header("AI Demand Forecasting & Holdout Validation"))
     print("-" * 80)
 
-    # Load summary if present
-    summary_path = os.path.join(models_dir, "pipeline_summary_report.json")
-    if os.path.exists(summary_path):
-        with open(summary_path) as f:
-            rep = json.load(f)
-            m_metrics = rep.get("forecasting_metrics", {})
-            audit = rep.get("decision_audit", {})
-            print(f"  Active Model:        {Style.ok(audit.get('active_model', 'N/A').upper())}")
-            print(f"  Decision Gate:       {Style.ok(audit.get('status', 'N/A'))} ({audit.get('reason', '')})")
-            print("\n  Performance Benchmark across 30-Day Chronological Holdout (18,000 observations):")
-            print(f"  {'MODEL':<18} | {'WAPE':<10} | {'MAE (units)':<12} | {'RMSE':<10} | {'R2 SCORE'}")
-            print("  " + "-" * 65)
-            for m_name, vals in m_metrics.items():
-                print(f"  {m_name.upper():<18} | {vals['wape']*100:>6.2f}%    | {vals['mae']:>8.2f}     | {vals['rmse']:>6.2f}     | {vals['r2']:.4f}")
-
-    # Generate sample next-day forecast for demonstration
+    # Generate the PRD's seven-day quantile forecast from observed history.
     loader = FlowGridDataLoader()
     skus_df = loader.load_skus()
     sku_name_map = dict(zip(skus_df['sku_id'], skus_df['product_name']))
     sku_cat_map = dict(zip(skus_df['sku_id'], skus_df['category_id']))
 
-    df = pd.read_csv(data_path)
-    latest_date = df['date'].max()
-    sample = df[df['date'] == latest_date].copy()
+    if not os.path.exists(data_path):
+        data_path = next((p for p in [
+            "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv",
+            "unused_data/synthetic_sales_daily.csv",
+        ] if os.path.exists(p)), data_path)
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Sales history not found: {data_path}")
+    required_history_columns = {"date", "store_id", "sku_id", "units_sold", "closing_stock"}
+    history = pd.read_csv(data_path, usecols=lambda column: column in required_history_columns)
+    report_path = os.path.join(models_dir, "weekly_forecast_report.json")
+    latest_history_date = str(pd.to_datetime(history["date"]).max().date())
+    report = None
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, encoding="utf-8") as report_file:
+                cached = json.load(report_file)
+            if cached.get("model_version") == "weekly-quantile-v1" and cached.get("history_end") == latest_history_date:
+                report = cached
+        except (OSError, ValueError, TypeError):
+            report = None
+    if report is None:
+        report = WeeklyQuantileForecaster().forecast(history)
+        WeeklyQuantileForecaster.save(report, report_path)
+    accuracy = report["accuracy"]
+    print("  Forecast horizon: 7-day totals | Quantiles: q10, q50, q80, q90, q95")
+    if accuracy.get("validation_baseline_wape") is not None:
+        print(f"  Validation baseline WAPE: {accuracy['validation_baseline_wape'] * 100:.2f}%")
+    if accuracy.get("validation_advanced_wape") is not None:
+        print(f"  Validation advanced WAPE: {accuracy['validation_advanced_wape'] * 100:.2f}%")
+    print(f"  HistGradientBoosting selected: {accuracy['advanced_model_used']}")
+    if accuracy.get("wape") is not None:
+        print(f"  Untouched test WAPE: {accuracy['wape'] * 100:.2f}% | Bias: {accuracy['bias'] * 100:+.2f}% | q95 coverage: {accuracy['coverage']['q95'] * 100:.2f}%")
+    forecast_date = pd.Timestamp(report["history_end"]) + pd.Timedelta(days=1)
+    forecasts = report["forecasts"]
+    sample = pd.DataFrame(forecasts)
 
     if target_store:
-        sample = sample[sample['store_id'] == target_store]
+        sample = sample[sample['retailerId'] == target_store]
     if target_sku:
-        sample = sample[sample['sku_id'] == target_sku]
+        sample = sample[sample['sku'] == target_sku]
 
     if len(sample) == 0:
-        sample = df[df['date'] == latest_date].head(8)
+        sample = pd.DataFrame(forecasts).head(8)
 
-    print(f"\n  Generated Demand Forecasts (Planning Date: {latest_date}):")
-    print(f"  {'STORE':<10} | {'SKU':<8} | {'PRODUCT NAME':<34} | {'CATEGORY':<14} | {'PRICE':<8} | {'FORECAST'}")
-    print("  " + "-" * 95)
+    print(f"\n  Generated Seven-Day Demand Forecasts (Cycle starts: {forecast_date.date()}):")
+    print(f"  {'STORE':<10} | {'SKU':<8} | {'PRODUCT NAME':<34} | {'CATEGORY':<14} | {'Q10-Q95':<15} | {'Q50':<6} | METHOD")
+    print("  " + "-" * 125)
 
     forecast_records = []
     for _, row in sample.head(10).iterrows():
-        hist = row['units_sold']
-        promo = row['synthetic_promo_flag']
-        pred_units = int(round(hist * (1.15 if promo else 0.98)))
-        p_name = sku_name_map.get(row['sku_id'], row['sku_id'])
+        p_name = sku_name_map.get(row['sku'], row['sku'])
         if len(p_name) > 32:
             p_name = p_name[:29] + "..."
-        cat = sku_cat_map.get(row['sku_id'], "GENERAL")
+        cat = sku_cat_map.get(row['sku'], "GENERAL")
         
-        print(f"  {row['store_id']:<10} | {row['sku_id']:<8} | {p_name:<34} | {cat:<14} | INR {row['unit_price']:<4.0f} | {Style.ok(str(pred_units)):>8} units")
+        print(f"  {row['retailerId']:<10} | {row['sku']:<8} | {p_name:<34} | {cat:<14} | {row['q10']:>5}-{row['q95']:<8} | {Style.ok(str(row['q50'])):<6} | {row['method']}")
         forecast_records.append({
-            "store_id": row['store_id'],
-            "sku_id": row['sku_id'],
-            "product_name": sku_name_map.get(row['sku_id'], row['sku_id']),
+            "retailerId": row['retailerId'],
+            "sku": row['sku'],
+            "product_name": sku_name_map.get(row['sku'], row['sku']),
             "category": cat,
-            "unit_price_inr": float(row['unit_price']),
-            "is_promo": bool(promo),
-            "historical_units": int(hist),
-            "predicted_units": pred_units
+            "cycle_start": str(forecast_date.date()),
+            "q10": int(row['q10']), "q50": int(row['q50']), "q80": int(row['q80']),
+            "q90": int(row['q90']), "q95": int(row['q95']),
+            "method": row['method'], "seriesClass": row['seriesClass'], "flags": row['flags']
         })
 
-    print("-" * 95)
-    print(f"  {Style.DIM}Note: Predictions pass strict zero-leakage, non-negative integer clamping.{Style.RESET}\n")
+    print("-" * 125)
+    print(f"  {Style.DIM}Forecast report saved to {report_path}{Style.RESET}\n")
 
     if getattr(args, "json", False):
-        print(json.dumps(forecast_records, indent=2))
+        print(json.dumps({"accuracy": accuracy, "forecasts": forecast_records}, indent=2))
     return 0
 
 
@@ -574,13 +591,184 @@ def cmd_audit(args):
 
 
 # ------------------------------------------------------------------------------
+# COMMAND: road-risk
+# ------------------------------------------------------------------------------
+def cmd_road_risk(args):
+    print_banner()
+    print(Style.header("Maharashtra Roadway Risk, Weather Disruptions & Transit Delay Predictor"))
+    print(f"{Style.DIM}Trained on 11,880 daily observations across 132 Maharashtra routes & 8 major highway corridors{Style.RESET}")
+    print("-" * 80)
+
+    loader = MaharashtraRoadwaysLoader()
+    predictor = RoadRiskDelayPredictor(models_dir=getattr(args, "models_dir", "saved_models"))
+
+    need_train = getattr(args, "train", False) or not predictor.load()
+    if need_train:
+        print("  Training LightGBM Delay Regressor and Random Forest Hazard Classifier on 11,880 rows...")
+        df_risk = loader.build_road_risk_training_features()
+        metrics = predictor.train(df_risk)
+        print(f"  * Samples: {metrics['samples_train']:,} train, {metrics['samples_val']:,} val")
+        print(f"  * Delay MAE: {Style.ok(str(metrics['lgbm_delay_mae_minutes']))} mins (Baseline: {metrics['baseline_delay_mae_minutes']} mins)")
+        print(f"  * R2 Score:  {Style.ok(str(metrics['lgbm_r2_score']))} | WAPE Improvement: {Style.ok('+' + str(metrics['relative_wape_improvement_percent']) + '%')}")
+        print(f"  * Hazard Accuracy: {Style.ok(str(metrics['hazard_classification_accuracy_percent']) + '%')}")
+        print("-" * 80)
+
+    target_corridor = getattr(args, "corridor", None)
+    rainfall = getattr(args, "rainfall", None)
+    congestion = getattr(args, "congestion", None)
+
+    if target_corridor:
+        rf_val = float(rainfall) if rainfall is not None else 18.5
+        cong_val = float(congestion) if congestion is not None else 0.2
+        is_ghat = "ghat" in target_corridor.lower() or "48" in target_corridor or "66" in target_corridor
+        terrain = "ghat_edge" if is_ghat else "plateau"
+
+        pred = predictor.predict_route_risk(
+            route_id=f"R-DEMO-{target_corridor}",
+            corridor_id=target_corridor,
+            terrain_class=terrain,
+            environment_region="Western Maharashtra" if is_ghat else "Vidarbha",
+            road_distance_km=240.0,
+            baseline_drive_time_minutes=290.0,
+            rainfall_mm=rf_val,
+            visibility_km=7.5 if rf_val > 15 else 9.0,
+            traffic_congestion_index=cong_val,
+            pothole_or_surface_risk_index=0.35 if rf_val > 15 else 0.15,
+            waterlogging_flag=(rf_val >= 35.0)
+        )
+        print(f"  Target Corridor:       {Style.ok(target_corridor)}")
+        print(f"  Terrain Classification:{pred['terrain_class']}")
+        print(f"  Simulated Weather:     Rainfall {rf_val} mm | Congestion {int(cong_val * 100)}%")
+        print(f"  Predicted Delay:       {Style.warn('+' + str(pred['predicted_delay_minutes']) + ' mins')}")
+        print(f"  Hazard Severity:       {Style.warn(pred['risk_severity'].upper())} (Confidence: {pred['risk_score'] * 100:.1f}%)")
+        print(f"  Dynamic Surcharge:     INR {pred['lateness_surcharge_inr']}")
+        print(f"  Dispatch Decision:     {Style.warn('REPLAN_RECOMMENDED') if pred['replan_recommended'] else Style.ok('ROUTE_COMMITTED')}")
+        print(f"  Detailed Explanation:  {pred['explanation']}")
+        out_data = pred
+    else:
+        print(f"  {'CORRIDOR':<14} | {'NAME / HIGHWAY':<26} | {'TERRAIN':<12} | {'RAIN (mm)':<9} | {'DELAY':<10} | {'SEVERITY':<8} | {'STATUS'}")
+        print("  " + "-" * 95)
+        corridors_demo = [
+            ("COR-NH48", "NH 48 (Pune-Satara-Kolhapur)", "ghat_edge", 24.5, 0.25, 233.0, 280.0),
+            ("COR-NH65", "NH 65 (Pune-Solapur-Hyd)", "plateau", 2.0, 0.08, 255.0, 290.0),
+            ("COR-NH60", "NH 60 (Pune-Nashik)", "ghat_edge", 15.0, 0.18, 212.0, 260.0),
+            ("COR-NH160", "NH 160 (Mumbai-Nashik)", "coastal_ghat", 32.0, 0.35, 168.0, 240.0),
+            ("COR-NH66", "NH 66 (Konkan Coastal)", "coastal_ghat", 48.0, 0.40, 310.0, 420.0),
+            ("COR-SM", "Samruddhi Mahamarg (Expressway)", "urban_plateau", 0.0, 0.05, 580.0, 480.0),
+            ("COR-NH61", "NH 61 (Ahilyanagar-Malshej)", "ghat_edge", 28.0, 0.22, 185.0, 260.0),
+            ("COR-LOCAL", "District Connecting Roads", "plateau", 5.0, 0.12, 95.0, 140.0),
+        ]
+        results_list = []
+        for corr_id, cname, terrain, rain, cong, dist, btime in corridors_demo:
+            p = predictor.predict_route_risk(
+                route_id=f"R-{corr_id}",
+                corridor_id=corr_id,
+                terrain_class=terrain,
+                environment_region="Western Maharashtra" if "ghat" in terrain else "Vidarbha",
+                road_distance_km=dist,
+                baseline_drive_time_minutes=btime,
+                rainfall_mm=rain,
+                traffic_congestion_index=cong,
+                waterlogging_flag=(rain > 40.0)
+            )
+            results_list.append(p)
+            badge = Style.warn("REPLAN") if p["replan_recommended"] else Style.ok("COMMITTED")
+            print(f"  {corr_id:<14} | {cname[:26]:<26} | {terrain:<12} | {rain:>6.1f} mm | {p['predicted_delay_minutes']:>6.1f} min | {p['risk_severity'].upper():<8} | {badge}")
+        out_data = results_list
+
+    print()
+    if getattr(args, "json", False):
+        print(json.dumps(out_data, indent=2))
+    return 0
+
+
+# ------------------------------------------------------------------------------
+# COMMAND: guard
+# ------------------------------------------------------------------------------
+def cmd_guard(args):
+    print_banner()
+    print(Style.header("Maharashtra Dynamic Decision Guard & Replanning Test Suite"))
+    print(f"{Style.DIM}Auditing the 12 official test fixtures from decision_guard_test_cases.csv{Style.RESET}")
+    print("-" * 80)
+
+    loader = MaharashtraRoadwaysLoader()
+    df_cases = loader.load_decision_guard_test_cases()
+    guard = MaharashtraDecisionGuard()
+    report = guard.run_fixture_test_cases(df_cases)
+
+    print(f"  {'CASE ID':<8} | {'SCENARIO NAME':<38} | {'STATUS':<8} | {'DETERMINED GUARD ACTION'}")
+    print("  " + "-" * 95)
+    for r in report["test_results"]:
+        status_badge = Style.ok("PASS") if r["status"] == "PASS" else Style.warn("FAIL")
+        print(f"  {r['test_case_id']:<8} | {r['scenario_name'][:38]:<38} | {status_badge:<8} | {r['actual_action']}")
+
+    print("-" * 80)
+    print(f"  Total Fixtures: {report['total_test_cases']} | Passed: {Style.ok(str(report['passed_test_cases']))} | Compliance: {Style.ok(str(report['pass_rate_percent']) + '%')}")
+    print()
+
+    if getattr(args, "json", False):
+        print(json.dumps(report, indent=2))
+    return 0 if report["all_passed"] else 1
+
+
+# ------------------------------------------------------------------------------
 # COMMAND: loop-train (3x Loop Engineering & Backpropagation)
 # ------------------------------------------------------------------------------
 def cmd_loop_train(args):
     print_banner()
-    print(Style.header("3x Neural Loop Engineering & Multi-Round Backpropagation"))
-    print(f"{Style.DIM}Optimizing DeepDemandNet Weights & Biases via Gradient Descent (CUDA Accelerated){Style.RESET}")
+    dataset_type = getattr(args, "dataset", "flipkart")
+    print(Style.header(f"3x Neural Loop Engineering & Multi-Round Backpropagation [{dataset_type.upper()}]"))
+    print(f"{Style.DIM}Optimizing Deep Neural Weights & Biases via Gradient Descent (CUDA/PyTorch Accelerated){Style.RESET}")
     print("-" * 80)
+
+    models_dir = getattr(args, "models_dir", "saved_models")
+    max_rows = getattr(args, "rows", 25000)
+    cycles = getattr(args, "cycles", 3)
+    epochs = getattr(args, "epochs", 3)
+
+    if dataset_type == "maharashtra":
+        print(f"  [1/3] Ingesting Maharashtra Delivery & Roadway Dataset (14,542 line items)...")
+        m_loader = MaharashtraRoadwaysLoader()
+        df_dispatch = m_loader.build_delivery_dispatch_training_features()
+        if max_rows and max_rows < len(df_dispatch):
+            df_dispatch = df_dispatch.iloc[:max_rows]
+
+        trainer = NeuralRoadwayDispatchTrainer(models_dir=models_dir)
+        summary = trainer.train_3x_loops(df_dispatch, epochs_per_loop=epochs)
+
+        print("\n" + Style.header("3x Neural Loop Backpropagation Results (Maharashtra Roadway Dispatch)"))
+        print(f"  {'CYCLE':<6} | {'OBJECTIVE FOCUS':<42} | {'LEARNING RATE':<14} | {'LOSS':<8} | {'VAL WAPE':<10} | {'DELTA ||W||':<12} | {'DELTA ||b||'}")
+        print("  " + "-" * 105)
+        for r in summary["loop_results"]:
+            print(f"  {r['cycle']:<6} | {r['name'][:42]:<42} | {r['learning_rate']:<14.1e} | {r['final_train_loss']:<8.4f} | {r['val_wape_percent']:>8.2f}% | {r['delta_weight_norm']:>+10.4f}  | {r['delta_bias_norm']:>+10.4f}")
+
+        delta_w_str = f"{summary['total_weight_delta']:+.4f}"
+        delta_b_str = f"{summary['total_bias_delta']:+.4f}"
+        best_wape_str = f"{summary['best_val_wape_percent']:.2f}%"
+
+        print("-" * 80)
+        print(f"  Total Weights Frobenius Norm Delta: {Style.ok(delta_w_str)}")
+        print(f"  Total Biases Norm Delta:           {Style.ok(delta_b_str)}")
+        print(f"  Best Validation WAPE:              {Style.ok(best_wape_str)}")
+        
+        sample_pred = trainer.predict_dispatch_quantity(
+            warehouse_id="W-PUN",
+            destination_location_id="L-MH-KOL",
+            representative_corridor_id="COR-NH48",
+            terrain_class="ghat_edge",
+            category_id="EDIBLE_OIL",
+            order_date_str="2026-10-24",
+            road_distance_km=233.0,
+            diesel_price_inr=98.68,
+            vehicle_mileage_kmpl=11.5,
+            traffic_congestion_index=0.15,
+            route_delay_minutes=25.0
+        )
+        print(f"  Sample Prediction (W-PUN -> Kolhapur via NH-48): {Style.ok(str(sample_pred))} units required.")
+        print()
+        if getattr(args, "json", False):
+            print(json.dumps(summary, indent=2))
+        return 0
 
     loader = FlowGridDataLoader()
     max_rows = getattr(args, "rows", 25000)
@@ -668,14 +856,16 @@ def run_interactive():
         print("  [3] Constrained Stock Allocation   (flowgrid optimize)")
         print("  [4] FMCG Distribution Intelligence (flowgrid recommend)")
         print("  [5] Ollama LLM Intelligence        (flowgrid ollama)")
-        print("  [6] Benchmark Controlled Scenarios (flowgrid scenario)")
-        print("  [7] Run PRD Acceptance Test Suite  (flowgrid test)")
-        print("  [8] View Decision Audit Trail      (flowgrid audit)")
-        print("  [9] 3x Neural Loop Engineering     (flowgrid loop-train)")
-        print("  [10] Exit")
+        print("  [6] Maharashtra Road Risk & Delay  (flowgrid road-risk)")
+        print("  [7] Decision Guard & Replan Test   (flowgrid guard)")
+        print("  [8] Benchmark Controlled Scenarios (flowgrid scenario)")
+        print("  [9] Run PRD Acceptance Test Suite  (flowgrid test)")
+        print("  [10] View Decision Audit Trail     (flowgrid audit)")
+        print("  [11] 3x Neural Loop Engineering    (flowgrid loop-train)")
+        print("  [12] Exit")
         print("-" * 80)
 
-        choice = input(f"{Style.CYAN}Enter selection [1-10]: {Style.RESET}").strip()
+        choice = input(f"{Style.CYAN}Enter selection [1-12]: {Style.RESET}").strip()
 
         default_data = (
             "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
@@ -697,6 +887,11 @@ def run_interactive():
             top_skus = 20
             stores = 12
             ollama_model = "llama3"
+            dataset = "maharashtra"
+            corridor = None
+            rainfall = None
+            congestion = None
+            train = False
 
         args = DummyArgs()
         if choice == "1":
@@ -710,18 +905,22 @@ def run_interactive():
         elif choice == "5":
             cmd_ollama(args)
         elif choice == "6":
-            cmd_scenario(args)
+            cmd_road_risk(args)
         elif choice == "7":
-            cmd_test(args)
+            cmd_guard(args)
         elif choice == "8":
-            cmd_audit(args)
+            cmd_scenario(args)
         elif choice == "9":
+            cmd_test(args)
+        elif choice == "10":
+            cmd_audit(args)
+        elif choice == "11":
             cmd_loop_train(args)
-        elif choice in ("10", "q", "exit"):
+        elif choice in ("12", "q", "exit"):
             print("\nExiting FlowGrid CLI. Goodbye!\n")
             break
         else:
-            print(Style.warn("Invalid selection. Please choose 1-10."))
+            print(Style.warn("Invalid selection. Please choose 1-12."))
 
         input(f"\n{Style.DIM}Press Enter to return to main menu...{Style.RESET}")
 
@@ -780,7 +979,18 @@ def main():
     p_audit = subparsers.add_parser("audit", parents=[common_parser], help="Decision audit trail and solver provenance")
     p_audit.set_defaults(func=cmd_audit)
 
+    p_road_risk = subparsers.add_parser("road-risk", parents=[common_parser], help="Maharashtra road risk & transit delay predictor")
+    p_road_risk.add_argument("--corridor", help="Specific corridor ID (e.g., COR-NH48, COR-NH65, COR-SM)")
+    p_road_risk.add_argument("--rainfall", type=float, help="Simulated rainfall in mm")
+    p_road_risk.add_argument("--congestion", type=float, help="Congestion index (0.0 to 1.0)")
+    p_road_risk.add_argument("--train", action="store_true", help="Force retrain LightGBM and Random Forest on 11,880 rows")
+    p_road_risk.set_defaults(func=cmd_road_risk)
+
+    p_guard = subparsers.add_parser("guard", parents=[common_parser], help="Audit Maharashtra Decision Guard test cases")
+    p_guard.set_defaults(func=cmd_guard)
+
     p_loop = subparsers.add_parser("loop-train", parents=[common_parser], help="3x Neural Loop Engineering & Backpropagation")
+    p_loop.add_argument("--dataset", choices=["flipkart", "maharashtra"], default="maharashtra", help="Target dataset (default maharashtra)")
     p_loop.add_argument("--cycles", type=int, default=3, help="Number of loop cycles (default 3)")
     p_loop.add_argument("--epochs", type=int, default=3, help="Epochs per cycle (default 3)")
     p_loop.add_argument("--rows", type=int, default=25000, help="Training row count (default 25000)")

@@ -84,6 +84,14 @@ class FlowGridDataLoader:
         path = self.get_path("route_estimates.csv")
         return pd.read_csv(path)
 
+    def load_sales_history(self) -> pd.DataFrame:
+        """Loads historical daily sales used by the seven-day quantile forecaster."""
+        path = self.get_path("synthetic_sales_daily.csv")
+        if not path.exists():
+            raise FileNotFoundError(f"Sales history file not found at {path}")
+        wanted = {"date", "store_id", "sku_id", "units_sold", "closing_stock"}
+        return pd.read_csv(path, usecols=lambda col: col in wanted)
+
     def load_model_ready_split(self, split: str = "test", max_rows: int = 0) -> pd.DataFrame:
         """
         Loads pre-computed, zero-leakage model-ready data (train, validation, or test).

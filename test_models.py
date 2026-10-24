@@ -16,6 +16,10 @@ from models.feature_pipeline import FeaturePipeline
 from models.demand_forecaster import DemandForecaster
 from models.anomaly_detector import AnomalyDetector
 from models.stock_optimizer import DistributionOptimizer
+from models.maharashtra_roadways_loader import MaharashtraRoadwaysLoader
+from models.road_risk_predictor import RoadRiskDelayPredictor
+from models.deep_roadway_dispatch_net import DeepRoadwayDispatchNet, NeuralRoadwayDispatchTrainer
+from models.decision_guard import MaharashtraDecisionGuard
 
 
 class TestFlowGridModels(unittest.TestCase):
@@ -369,6 +373,114 @@ class TestFlowGridModels(unittest.TestCase):
         self.assertGreater(len(opt_output["executive_dispatch_briefing"]), 20)
         self.assertIn("optimized_recommendations", opt_output)
         self.assertEqual(opt_output["optimized_recommendations"][0]["dispatch_priority"], "PRIORITY_P0_IMMEDIATE")
+
+    def test_12_maharashtra_roadways_loader(self):
+        """Verifies loading and relational joining of Maharashtra dynamic delivery dataset."""
+        loader = MaharashtraRoadwaysLoader()
+        locs = loader.load_locations()
+        self.assertEqual(len(locs), 33)
+        self.assertIn("diesel_inr_per_litre_2026_10_24", locs.columns)
+
+        whs = loader.load_warehouses()
+        self.assertEqual(len(whs), 4)
+
+        routes = loader.load_route_options()
+        self.assertEqual(len(routes), 132)
+
+        corrs = loader.load_corridors()
+        self.assertEqual(len(corrs), 8)
+
+        conds = loader.load_road_conditions_daily()
+        self.assertEqual(len(conds), 11880)
+
+        orders = loader.load_delivery_orders()
+        self.assertEqual(len(orders), 2970)
+
+        lines = loader.load_delivery_order_lines()
+        self.assertEqual(len(lines), 14542)
+
+        df_risk = loader.build_road_risk_training_features()
+        self.assertEqual(len(df_risk), 11880)
+        self.assertIn("is_ghat_route", df_risk.columns)
+        self.assertIn("waterlogging_flag_int", df_risk.columns)
+
+        df_dispatch = loader.build_delivery_dispatch_training_features()
+        self.assertEqual(len(df_dispatch), 14542)
+        self.assertIn("fuel_cost_inr_est_one_way", df_dispatch.columns)
+
+        topo = loader.get_network_topology()
+        self.assertEqual(len(topo["warehouses"]), 4)
+        self.assertEqual(len(topo["locations"]), 33)
+        self.assertEqual(len(topo["distance_matrix"]), 132)
+
+    def test_13_road_risk_delay_predictor(self):
+        """Verifies LightGBM delay regressor and Random Forest hazard classifier on Maharashtra dataset."""
+        loader = MaharashtraRoadwaysLoader()
+        df_risk = loader.build_road_risk_training_features()
+
+        predictor = RoadRiskDelayPredictor(models_dir="saved_models")
+        metrics = predictor.train(df_risk)
+
+        self.assertGreater(metrics["lgbm_r2_score"], 0.85)
+        self.assertLess(metrics["lgbm_delay_mae_minutes"], 5.0)
+        self.assertTrue(metrics["meets_prd_5pct_gate"])
+        self.assertGreater(metrics["hazard_classification_accuracy_percent"], 90.0)
+
+        # Operational prediction test on wet ghat route
+        pred = predictor.predict_route_risk(
+            route_id="R-W-PUN-KOL",
+            corridor_id="COR-NH48",
+            terrain_class="ghat_edge",
+            environment_region="Western Maharashtra",
+            road_distance_km=233.0,
+            baseline_drive_time_minutes=280.0,
+            rainfall_mm=25.0,
+            traffic_congestion_index=0.25,
+            waterlogging_flag=False
+        )
+        self.assertGreater(pred["predicted_delay_minutes"], 20.0)
+        self.assertIn(pred["risk_severity"], ["medium", "high"])
+        self.assertGreater(pred["lateness_surcharge_inr"], 0.0)
+        self.assertIn("Corridor COR-NH48", pred["explanation"])
+
+    def test_14_deep_roadway_dispatch_net_loop_engineering(self):
+        """Verifies 3x neural loop backpropagation optimizing weights and biases on dispatch data."""
+        loader = MaharashtraRoadwaysLoader()
+        df_dispatch = loader.build_delivery_dispatch_training_features()
+
+        trainer = NeuralRoadwayDispatchTrainer(models_dir="saved_models")
+        # Run 3x loop engineering on representative slice
+        summary = trainer.train_3x_loops(df_dispatch.iloc[:2500], epochs_per_loop=2)
+
+        self.assertEqual(len(summary["loop_results"]), 3)
+        self.assertNotEqual(summary["total_weight_delta"], 0.0)
+        self.assertNotEqual(summary["total_bias_delta"], 0.0)
+
+        # Output prediction test
+        pred = trainer.predict_dispatch_quantity(
+            warehouse_id="W-PUN",
+            destination_location_id="L-MH-KOL",
+            representative_corridor_id="COR-NH48",
+            terrain_class="ghat_edge",
+            category_id="EDIBLE_OIL",
+            order_date_str="2026-10-24",
+            road_distance_km=233.0,
+            diesel_price_inr=98.68
+        )
+        self.assertGreaterEqual(pred, 0.0)
+
+    def test_15_maharashtra_decision_guard_fixtures(self):
+        """Verifies 100% compliance across the 12 official test fixtures in decision_guard_test_cases.csv."""
+        loader = MaharashtraRoadwaysLoader()
+        df_cases = loader.load_decision_guard_test_cases()
+
+        guard = MaharashtraDecisionGuard()
+        report = guard.run_fixture_test_cases(df_cases)
+
+        self.assertEqual(report["total_test_cases"], 12)
+        self.assertEqual(report["passed_test_cases"], 12)
+        self.assertEqual(report["pass_rate_percent"], 100.0)
+        self.assertTrue(report["all_passed"])
 
 
 if __name__ == "__main__":
