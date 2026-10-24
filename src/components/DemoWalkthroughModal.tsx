@@ -1,0 +1,169 @@
+import React from 'react';
+import {
+  Sparkles,
+  X,
+  ArrowRight,
+  CheckCircle2,
+  Play,
+  RotateCcw,
+  WifiOff,
+  BarChart3,
+  Cpu,
+  Layers,
+  HelpCircle
+} from 'lucide-react';
+import { ActiveTab } from './Navbar';
+import { BENCHMARK_COMPARISONS } from '../data/mockData';
+
+interface DemoWalkthroughModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onNavigateTab: (tab: ActiveTab) => void;
+  onTriggerGenerate: () => void;
+  onTriggerStaleConflict: () => void;
+  onToggleOffline: () => void;
+}
+
+export const DemoWalkthroughModal: React.FC<DemoWalkthroughModalProps> = ({
+  isOpen,
+  onClose,
+  onNavigateTab,
+  onTriggerGenerate,
+  onTriggerStaleConflict,
+  onToggleOffline,
+}) => {
+  if (!isOpen) return null;
+
+  const demoSteps = [
+    {
+      step: 1,
+      title: 'Import & Validate Master Data (FR-02, J1)',
+      desc: 'Verify schema, foreign keys, and the 5% error threshold rule (≤5% commits valid rows, >5% transactional rollback). Demonstrates single sales path deduplication.',
+      tab: 'import' as ActiveTab,
+      actionLabel: 'Go to Data Import',
+      action: () => onNavigateTab('import'),
+    },
+    {
+      step: 2,
+      title: 'Review Demand Quantiles & Stockout Correction (FR-08, J2)',
+      desc: 'Inspect 7-day quantile forecasts (p10 to p95). Notice how stockout days are corrected (RC2) to prevent downward replenishment spirals, and ML switches between HistGradientBoosting and moving average.',
+      tab: 'forecast' as ActiveTab,
+      actionLabel: 'Review Demand Intelligence',
+      action: () => onNavigateTab('forecast'),
+    },
+    {
+      step: 3,
+      title: 'Generate Plan & Inspect Explainable AI Reason Card (FR-09, FR-10, J3)',
+      desc: 'Marginal-value allocation completes in <1ms with zero constraint violations. Open any line reason card to inspect marginal value tiers, arrival shelf-life (≥70%), and lateness-aware sourcing.',
+      tab: 'plans' as ActiveTab,
+      actionLabel: 'Generate & Explain Plan',
+      action: () => {
+        onNavigateTab('plans');
+        onTriggerGenerate();
+      },
+    },
+    {
+      step: 4,
+      title: 'Simulate 409 Snapshot Stale Conflict & 1-Click Re-plan (FR-11, FR-11b)',
+      desc: 'Simulate what happens when physical stock changes during planner review. Approval is blocked with 409 for affected lines, and one click re-plans only those lines without disturbing approved stock.',
+      tab: 'plans' as ActiveTab,
+      actionLabel: 'Simulate 409 Stale Conflict',
+      action: () => {
+        onNavigateTab('plans');
+        onTriggerStaleConflict();
+      },
+    },
+    {
+      step: 5,
+      title: 'Offline Kirana POS Capture & Conflict Resolution (FR-05, FR-06, J5)',
+      desc: 'Toggle offline mode to simulate weak village network. Record sales and receipts into the offline queue with unique UUIDs. Reconnect and watch them sync with zero duplicates or data loss.',
+      tab: 'retailer' as ActiveTab,
+      actionLabel: 'Test Offline Kirana POS',
+      action: () => {
+        onNavigateTab('retailer');
+        onToggleOffline();
+      },
+    },
+    {
+      step: 6,
+      title: 'Benchmark Against Current Practice & Strong Baseline (FR-13, J6)',
+      desc: `Compare side-by-side results on hidden true demand across 20 simulation seeds: ${BENCHMARK_COMPARISONS.stockoutReductionVsCurrentPct}% stockouts, ${BENCHMARK_COMPARISONS.wasteReductionVsCurrentPct}% expiry waste, and ${BENCHMARK_COMPARISONS.lostMarginReductionVsCurrentPct}% lost margin reduction.`,
+      tab: 'benchmark' as ActiveTab,
+      actionLabel: 'View Impact Benchmark',
+      action: () => onNavigateTab('benchmark'),
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl overflow-hidden my-8">
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-900/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">
+                3-Minute Hackathon Demo Script (Section 20)
+              </h3>
+              <p className="text-xs text-indigo-300/80">Step-by-step evaluator guide to Problem Statement 2</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Step List */}
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {demoSteps.map(step => (
+            <div
+              key={step.step}
+              className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
+            >
+              <div className="space-y-1 max-w-md">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 font-bold text-[11px] flex items-center justify-center">
+                    {step.step}
+                  </span>
+                  <h4 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">
+                    {step.title}
+                  </h4>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed pl-7">
+                  {step.desc}
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  step.action();
+                  onClose();
+                }}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 transition-all flex items-center gap-1.5 shrink-0 ml-7 sm:ml-0"
+              >
+                <span>{step.actionLabel}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          <span>HETVAYA v1.5 • FMCG Traditional Trade Intelligence</span>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            Close Guide
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
