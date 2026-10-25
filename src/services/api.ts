@@ -635,5 +635,78 @@ export const FlowGridAPI = {
       },
     ];
   },
+
+  /**
+   * Save SMS Smart Alert Settings for persona
+   */
+  async saveSmsSettings(persona: string, settings: any): Promise<any> {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/notifications/sms/settings/${persona}`, {
+        method: 'POST',
+        headers: getHeaders(persona as any),
+        body: JSON.stringify({
+          enabled: settings.enabled,
+          phone: settings.phone,
+          types: settings.types,
+          quiet_hours: settings.quietHours,
+        }),
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('SMS settings sync offline:', e);
+    }
+    return { status: 'SAVED_LOCAL' };
+  },
+
+  /**
+   * Fetch SMS Smart Alert Settings
+   */
+  async getSmsSettings(persona: string): Promise<any> {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/notifications/sms/settings/${persona}`, {
+        headers: getHeaders(persona as any),
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // offline fallback
+    }
+    return null;
+  },
+
+  /**
+   * Dispatch Test SMS Smart Alert
+   */
+  async dispatchTestSms(phone: string, persona: string, customMessage?: string): Promise<any> {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/notifications/sms/test`, {
+        method: 'POST',
+        headers: getHeaders(persona as any),
+        body: JSON.stringify({
+          phone,
+          persona,
+          custom_message: customMessage,
+        }),
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('Test SMS dispatch offline:', e);
+    }
+    return null;
+  },
+
+  /**
+   * Fetch SMS Dispatch History Audit Log
+   */
+  async getSmsHistory(): Promise<any> {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/notifications/sms/history`, {
+        headers: getHeaders(),
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // offline fallback
+    }
+    return null;
+  },
 };
 

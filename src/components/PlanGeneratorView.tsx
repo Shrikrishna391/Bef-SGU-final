@@ -39,6 +39,7 @@ import { PlanKpiCards } from './plan/PlanKpiCards';
 import { PlanToolbar, PlanFilterState, SortOption, ShelfLifeFilter } from './plan/PlanToolbar';
 import { PlanCardItem } from './plan/PlanCardItem';
 import { ApproveAllModal } from './plan/ApproveAllModal';
+import { SmsAlertSettings } from './SmsAlertSettings';
 
 interface PlanGeneratorViewProps {
   planRun: PlanRun | null;
@@ -647,6 +648,16 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* SMS Smart Alerts Settings Box */}
+      <SmsAlertSettings
+        isDay={theme === 'day'}
+        userRole={userRole}
+        onSaved={triggerFeedback}
+        title="Distribution Planning SMS Notification Settings"
+        subtitle="Get instant smart alerts on statewide plan generation, stockout risk alerts, corridor delay reroutes, and field overrides directly to your phone."
+        defaultExpanded={false}
+      />
 
       {/* Action Feedback Notification Banner */}
       {actionFeedback && (

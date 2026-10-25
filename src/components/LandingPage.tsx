@@ -4,6 +4,7 @@ import { TerraDusk } from './TerraDusk';
 import { INITIAL_BATCHES, INITIAL_FORECASTS, INITIAL_PRODUCTS, INITIAL_RETAILERS, INITIAL_ROUTES, INITIAL_WAREHOUSES } from '../data/mockData';
 import { PLAN_HORIZON_DAYS, SYNTHETIC_SALES_PANEL, WORKSPACE_SEED_SCOPE } from '../data/demoScope';
 import { runOptimizationEngine } from '../services/optimizationEngine';
+import { ChatbotLauncher } from './chatbot/ChatbotLauncher';
 import './LandingPage.css';
 
 export function LandingPage() {
@@ -213,6 +214,9 @@ export function LandingPage() {
           <a href="/dashboard">Open workspace <ArrowRight size={14} /></a>
         </footer>
       </main>
+
+      {/* HETVAYA Product AI Assistant - Pinned at bottom-left */}
+      <ChatbotLauncher />
     </div>
   );
 }

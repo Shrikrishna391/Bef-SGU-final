@@ -14,7 +14,8 @@ import { SmartDispatchView } from './components/SmartDispatchView';
 import { MapSection } from './components/map-section/MapSection';
 import { DemoWalkthroughModal } from './components/DemoWalkthroughModal';
 import { WhatIfSimulatorModal } from './components/WhatIfSimulatorModal';
-import { UserCheck, ShieldCheck, Sparkles, CheckCircle2, ChevronRight, Lock, Store, Warehouse as WarehouseIcon, Cpu, Sliders } from 'lucide-react';
+import { ChatbotLauncher } from './components/chatbot/ChatbotLauncher';
+import { UserCheck, ShieldCheck, Sparkles, CheckCircle2, ChevronRight, Lock, Store, Warehouse as WarehouseIcon, Cpu, Sliders, Bot, Smartphone } from 'lucide-react';
 
 import {
   INITIAL_PRODUCTS,
@@ -128,9 +129,10 @@ export const App: React.FC = () => {
   const [planRun, setPlanRun] = useState<PlanRun | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  // Modals
+  // Modals & Chatbot Panel
   const [isDemoModalOpen, setIsDemoModalOpen] = useState<boolean>(false);
   const [isWhatIfModalOpen, setIsWhatIfModalOpen] = useState<boolean>(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState<boolean>(false);
 
   // Initial backend health probe & data load
   useEffect(() => {
@@ -546,6 +548,8 @@ export const App: React.FC = () => {
         onOpenDemoModal={() => setIsDemoModalOpen(true)}
         onOpenWhatIfModal={() => setIsWhatIfModalOpen(true)}
         onTriggerSync={handleTriggerSync}
+        onOpenChatbot={() => setIsChatbotOpen(prev => !prev)}
+        isChatbotOpen={isChatbotOpen}
       />
 
       {/* Main Content Column */}
@@ -580,12 +584,52 @@ export const App: React.FC = () => {
               </span>
               <span className="text-slate-400">•</span>
               <span className="text-slate-500">{PLAN_HORIZON_DAYS}-day planning horizon</span>
-
             </div>
 
+            {/* Quick Action Badges: SMS Smart Alerts & AI FMCG Assistant */}
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('sms-settings-section');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    if (userRole === 'priya') setActiveTab('health');
+                    else if (userRole === 'ganesh') setActiveTab('retailer');
+                    else if (userRole === 'sunita') setActiveTab('warehouse');
+                    else setActiveTab('plans');
+                    setTimeout(() => {
+                      document.getElementById('sms-settings-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 250);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 transition-all cursor-pointer"
+                title="SMS Smart Alerts active for your persona. Click to view configuration."
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <Smartphone className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <span>SMS Smart Alerts</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-1 py-0.2 rounded font-mono font-bold">
+                  Active
+                </span>
+              </button>
 
+              <button
+                type="button"
+                onClick={() => setIsChatbotOpen(prev => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer group ${
+                  isChatbotOpen
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                    : 'bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-300 border-blue-500/30'
+                }`}
+                title="Open HETVAYA FMCG Product AI Assistant"
+              >
+                <Bot className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                <span>Ask HETVAYA AI</span>
+              </button>
+            </div>
           </div>
-
         </div>
 
                 {/* Main Content Area */}
@@ -690,6 +734,14 @@ export const App: React.FC = () => {
           </div>
         </footer>
       </div>
+
+      <ChatbotLauncher
+        activeTab={activeTab}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        userRole={userRole}
+        isOpen={isChatbotOpen}
+        onToggleOpen={setIsChatbotOpen}
+      />
 
       {/* 3-Minute Demo Walkthrough Modal */}
       <DemoWalkthroughModal

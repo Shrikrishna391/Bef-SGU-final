@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     forecasts,
     ai,
     agents,
+    notifications,
 )
 
 api_router = APIRouter()
@@ -26,6 +27,7 @@ api_router.include_router(sales.router)
 api_router.include_router(forecasts.router)
 api_router.include_router(ai.router)
 api_router.include_router(agents.router)
+api_router.include_router(notifications.router)
 
 api_router.include_router(warehouses.router)
 api_router.include_router(stores.router)
