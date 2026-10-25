@@ -89,7 +89,6 @@ class FlowGridDataLoader:
         path = self.get_path("synthetic_sales_daily.csv")
         if not path.exists():
             for alt in [
-                Path("unused_data/synthetic_sales_daily.csv"),
                 self.base_dir.parent / "templates" / "sales_daily.csv",
                 self.base_dir / "sales_daily.csv",
                 Path("flowgrid_flipkart_100sku/templates/sales_daily.csv"),

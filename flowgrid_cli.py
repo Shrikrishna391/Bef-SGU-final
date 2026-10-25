@@ -38,8 +38,10 @@ from models.ollama_intelligence import OllamaIntelligenceAdapter
 from models.maharashtra_roadways_loader import MaharashtraRoadwaysLoader
 from models.road_risk_predictor import RoadRiskDelayPredictor
 from models.deep_roadway_dispatch_net import DeepRoadwayDispatchNet, NeuralRoadwayDispatchTrainer
-from models.decision_guard import MaharashtraDecisionGuard
-from prd_test_suite import PRDTestSuite, safe_json_default
+try:
+    from scripts.prd_test_suite import PRDTestSuite, safe_json_default
+except ImportError:
+    from prd_test_suite import PRDTestSuite, safe_json_default
 
 
 
@@ -208,7 +210,7 @@ def cmd_forecast(args):
     if not os.path.exists(data_path):
         data_path = next((p for p in [
             "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv",
-            "unused_data/synthetic_sales_daily.csv",
+            "synthetic_sales_daily.csv",
         ] if os.path.exists(p)), data_path)
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Sales history not found: {data_path}")
@@ -870,7 +872,7 @@ def run_interactive():
         default_data = (
             "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
             if os.path.exists("flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv")
-            else ("synthetic_sales_daily.csv" if os.path.exists("synthetic_sales_daily.csv") else "unused_data/synthetic_sales_daily.csv")
+            else "synthetic_sales_daily.csv"
         )
 
         class DummyArgs:
@@ -932,7 +934,7 @@ def main():
     default_data = (
         "flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv"
         if os.path.exists("flowgrid_flipkart_100sku/data/synthetic_sales_daily.csv")
-        else ("synthetic_sales_daily.csv" if os.path.exists("synthetic_sales_daily.csv") else "unused_data/synthetic_sales_daily.csv")
+        else "synthetic_sales_daily.csv"
     )
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON")

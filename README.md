@@ -184,7 +184,7 @@ Directly implements PRD Section 6 Functional Requirements and Section 12 Success
 | **FR-P0-11** | PRD Sec. 6.1 & 11 | Complete audit traceability & solver wall time $\le 10\text{s}$ | Solver latency 0.29s $\le 10\text{s}$ | **PASS** |
 
 **Final Score:** **6/6 Tests Passed (100.0% Compliance)**.
-**Unit Tests:** **15/15 Tests Passed** in `test_models.py`.
+**Unit Tests:** **15/15 Tests Passed** in [`tests/test_models.py`](tests/test_models.py).
 
 ---
 
@@ -401,11 +401,13 @@ pytest -v
 | Subsystem | Primary Path | Tech Stack / Components | Role |
 | :--- | :--- | :--- | :--- |
 | **Frontend UI** | [`src/`](src/) | React 19, TypeScript, Tailwind CSS v4, Recharts | Planner console, Kirana POS, depot picker & benchmark visuals |
-| **Decision & ML Engine** | [`models/`](models/) | PyTorch, Scikit-learn, Joblib | Neural demand forecaster, anomaly detector & stock optimizer |
 | **Authoritative Backend** | [`app/`](app/) | FastAPI, SQLAlchemy 2.0, Pydantic | Inventory store, reservation authority & plan commitment lifecycle |
+| **Decision & ML Engine** | [`models/`](models/) | PyTorch, Scikit-learn, Joblib, OR-Tools | Neural demand forecaster, anomaly detector & stock optimizer |
 | **Database Migrations** | [`alembic/`](alembic/) | Alembic, PostgreSQL / SQLite | Authoritative schema evolution and constraint enforcement |
-| **AI Explainability & Agents** | [`app/api/v1/endpoints/`](app/api/v1/endpoints/) | Local Ollama LLM (`llama3.2:latest`) | Grounded plan trade-off explanation & incident disruption parsing |
-| **Delivery Fleet** | [`app/models/agent.py`](app/models/agent.py) | Autonomous Agents API | Driver telemetry, GPS heartbeats & proximity-based reassignment |
-| **Dataset & Benchmarks** | [`FlowGrid_Maharashtra_Dataset/`](FlowGrid_Maharashtra_Dataset/) | CSV, GeoJSON, OSRM scripts | Maharashtra FMCG demand, weather, roads & depot simulation data |
-| **Test Suite** | [`tests/`](tests/) | Pytest (100 test cases) | Backend decision guard, RBAC, inventory and AI test suites |
+| **Automated Test Suite** | [`tests/`](tests/) | Pytest (100+ test cases) | Backend decision guard, RBAC, inventory, and model unit test suites |
+| **Operational Scripts** | [`scripts/`](scripts/) | Python, TypeScript (tsx) | Pipeline runner, PRD acceptance suite & live system integration test |
+| **Documentation & PRDs** | [`docs/`](docs/) | Markdown, Architecture Specs | FlowGrid PRD v2.0, Hetvaya PRD v1.5 & system design guides |
+| **Operational FMCG Data** | [`flowgrid_flipkart_100sku/`](flowgrid_flipkart_100sku/) | 100 Flipkart SKUs, Inventory, Batches | Active production-grade FMCG distribution dataset & model splits |
+| **Geospatial & Roadway Data**| [`FlowGrid_Maharashtra_Dataset/`](FlowGrid_Maharashtra_Dataset/) | CSV, GeoJSON, OSRM scripts | Maharashtra FMCG demand, weather, roads & depot simulation data |
+| **Model Weights & Reports** | [`saved_models/`](saved_models/) | PyTorch (.pt), Joblib, JSON reports | Pre-trained neural weights, anomaly detectors & forecast quality metrics |
 
