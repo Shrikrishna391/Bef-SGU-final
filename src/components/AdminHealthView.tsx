@@ -319,23 +319,12 @@ export const AdminHealthView: React.FC<AdminHealthViewProps> = ({
       }`}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                <Radio className="w-3.5 h-3.5" />
-                Data &amp; Observability • System Health &amp; Alerts
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-mono">
-                API Live Probe
-              </span>
-            </div>
+
 
             <h1 className={`text-xl sm:text-2xl font-black tracking-tight mt-2 ${isDay ? 'text-[#0a192f]' : 'text-white'}`}>
-              System Health, Connector Monitoring &amp; Administration
+              System health
             </h1>
-            <p className={`text-xs mt-1 max-w-2xl ${isDay ? 'text-slate-600' : 'text-slate-400'}`}>
-              Scope: <strong>Priya Sharma (System Administrator)</strong>. Real-time API &amp; database health, connector telemetry,
-              5% Rule validation quarantine, source-trust policies, alert thresholds, and audit logging.
-            </p>
+
           </div>
 
           {/* Fault-Injection & Database Sync Controls */}

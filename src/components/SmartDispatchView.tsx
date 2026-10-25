@@ -217,123 +217,88 @@ export const SmartDispatchView: React.FC<SmartDispatchViewProps> = ({
         </div>
       )}
 
-      {/* Persona Scope Scoping Banner */}
-      {userRole === 'ganesh' && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-sm">
-              G
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-amber-300 text-sm">
-                  Kirana Store Scope: Ganesh Patil (Kolhapur STORE-MH-KOL-001)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  STORE INBOUND FLEET
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Showing {filteredOrders.length} incoming delivery orders scheduled for Kolhapur store. Fleet vehicle re-assignment is managed centrally by central dispatch.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 whitespace-nowrap">
-            Delivery Tracking Active
-          </span>
-        </div>
-      )}
-
-      {userRole === 'sunita' && (
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-              S
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-emerald-300 text-sm">
-                  Pune Hub Dispatch Scope: Sunita Deshmukh (Warehouse Manager)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                  W-PUN OUTBOUND
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Managing {filteredOrders.length} outbound vehicle dispatch orders departing from Pune Central Logistics Hub.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
-            Hub Dock Dispatch
-          </span>
-        </div>
-      )}
-
-      {/* Main Top Header Banner */}
-      <div
-        className={`p-6 sm:p-8 rounded-3xl transition-all duration-300 relative overflow-hidden ${
-          isDay
-            ? 'bg-[#ffffff] border border-slate-200/90 shadow-lg'
-            : 'glass-panel border-slate-800 shadow-2xl'
-        }`}
-      >
-        {/* Glow Effects */}
-        <div className="absolute -top-24 -left-24 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
-                <Truck className="w-3.5 h-3.5" />
-                Smart Delivery Agent Module
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Lane Clearance Gating
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30">
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                Vice-Versa Return Optimization
-              </span>
-            </div>
+
 
             <h1
               className={`font-parmyo text-2xl sm:text-3xl md:text-4xl font-normal tracking-wide ${
                 isDay ? 'text-[#0a192f]' : 'text-white'
               }`}
             >
-              SMART DELIVERY AGENT &amp; NATIVE DRIVER DISPATCH
+              Smart delivery dispatch
             </h1>
 
             {/* Sub-headline with Multi-Colored Font */}
-            <p className="text-sm sm:text-base font-multicolor-subhead leading-relaxed">
-              Client Address Classification Engine • Narrow Alley Gating • Native Territory Affinity • Zero Empty Backhauls
-            </p>
 
-            <p className={`text-xs sm:text-sm max-w-3xl leading-relaxed ${isDay ? 'text-slate-600' : 'text-slate-300'}`}>
-              Overcoming the kirana delivery bottleneck across Maharashtra. Narrow wada lanes (≤2.5m) trap standard commercial trucks.
-              Our engine parses client addresses, classifies accessibility tiers, and assigns local native drivers who speak regional dialects,
-              know landmark-based shortcuts, and carry verified street clearance.
-            </p>
+
+
           </div>
 
           {/* Global dispatch action */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-            {/* Smart Auto-Assign Button (Required Navy Blue in Day mode) */}
-            <button
-              type="button"
-              onClick={handleAutoAssign}
-              className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider cursor-pointer active:scale-95 transition-all duration-200 ${
-                isDay
-                  ? 'btn-navy text-white'
-                  : 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-xl shadow-indigo-500/30'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-cyan-300" />
-              <span>Smart AI Auto-Assign All</span>
-            </button>
+            {/* Persona Scoped Global Dispatch Button */}
+            {userRole === 'ganesh' ? (
+              <button
+                type="button"
+                onClick={() => showToast('✓ Live Kolhapur driver tracking active. Sachin Shinde ETA: 11:30 AM (Shahupuri Wada corridor).')}
+                className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider cursor-pointer active:scale-95 transition-all duration-200 ${
+                  isDay
+                    ? 'btn-navy text-white'
+                    : 'bg-gradient-to-r from-amber-600 to-indigo-600 text-white shadow-xl shadow-amber-500/20'
+                }`}
+              >
+                <Navigation className="w-4 h-4 text-cyan-300" />
+                <span>Track Kolhapur Deliveries</span>
+              </button>
+            ) : userRole === 'sunita' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleAutoAssign();
+                  showToast('✓ Outbound Pune hub trucks dispatched with native lane clearance verification.');
+                }}
+                className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider cursor-pointer active:scale-95 transition-all duration-200 ${
+                  isDay
+                    ? 'btn-navy text-white'
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-500/20'
+                }`}
+              >
+                <Truck className="w-4 h-4 text-emerald-200" />
+                <span>Dispatch Pune Outbound Fleet</span>
+              </button>
+            ) : userRole === 'priya' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleAutoAssign();
+                  showToast('✓ Fleet gating audit verified: 100% Lane clearance safety enforced across all districts.');
+                }}
+                className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider cursor-pointer active:scale-95 transition-all duration-200 ${
+                  isDay
+                    ? 'btn-navy text-white'
+                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-500/20'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-purple-200" />
+                <span>Verify Fleet Gating Audit</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAutoAssign}
+                className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider cursor-pointer active:scale-95 transition-all duration-200 ${
+                  isDay
+                    ? 'btn-navy text-white'
+                    : 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-xl shadow-indigo-500/30'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-cyan-300" />
+                <span>Smart AI Auto-Assign All</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -451,52 +416,61 @@ export const SmartDispatchView: React.FC<SmartDispatchViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
-            {/* Quick Toggle Button between Manual and Auto-Suggested */}
-            <div className="flex rounded-xl p-1 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setAssignmentSettings(prev => ({ ...prev, mode: 'MANUAL' }));
-                  showToast('✓ Switched to Manual Assignment mode.');
-                }}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                  assignmentSettings.mode === 'MANUAL'
-                    ? isDay ? 'btn-navy text-white shadow-sm' : 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Manual Mode
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAssignmentSettings(prev => ({ ...prev, mode: 'AUTO_SUGGEST_PROFILE' }));
-                  showToast('✓ Switched to Auto-Suggested Profile Routes mode.');
-                }}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                  assignmentSettings.mode === 'AUTO_SUGGEST_PROFILE'
-                    ? isDay ? 'btn-navy text-white shadow-sm' : 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Auto-Suggested Routes
-              </button>
-            </div>
+            {userRole === 'ganesh' ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                <Truck className="w-3.5 h-3.5 text-amber-500" />
+                <span>Kolhapur Delivery Fleet Active</span>
+              </div>
+            ) : (
+              <>
+                {/* Quick Toggle Button between Manual and Auto-Suggested */}
+                <div className="flex rounded-xl p-1 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssignmentSettings(prev => ({ ...prev, mode: 'MANUAL' }));
+                      showToast('✓ Switched to Manual Assignment mode.');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      assignmentSettings.mode === 'MANUAL'
+                        ? isDay ? 'btn-navy text-white shadow-sm' : 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Manual Mode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssignmentSettings(prev => ({ ...prev, mode: 'AUTO_SUGGEST_PROFILE' }));
+                      showToast('✓ Switched to Auto-Suggested Profile Routes mode.');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      assignmentSettings.mode === 'AUTO_SUGGEST_PROFILE'
+                        ? isDay ? 'btn-navy text-white shadow-sm' : 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Auto-Suggested Routes
+                  </button>
+                </div>
 
-            {/* Gear Button for Configuration Modal */}
-            <button
-              type="button"
-              onClick={() => setIsSettingsModalOpen(true)}
-              className={`px-3 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-                isDay
-                  ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 shadow-sm'
-              }`}
-              title="Configure Assignment Settings & Profile Routing Constraints"
-            >
-              <Settings className="w-4 h-4 text-indigo-500" />
-              <span>Setting</span>
-            </button>
+                {/* Gear Button for Configuration Modal */}
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsModalOpen(true)}
+                  className={`px-3 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+                    isDay
+                      ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 shadow-sm'
+                  }`}
+                  title="Configure Assignment Settings & Profile Routing Constraints"
+                >
+                  <Settings className="w-4 h-4 text-indigo-500" />
+                  <span>Setting</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -678,21 +652,40 @@ export const SmartDispatchView: React.FC<SmartDispatchViewProps> = ({
 
                   {/* Top Action Row for this Order */}
                   <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => handleSimulateDelivery(order)}
-                      disabled={isSimulatingThis || order.status === 'DELIVERED'}
-                      className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        order.status === 'DELIVERED'
-                          ? 'opacity-50 cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                          : isDay
-                          ? 'btn-navy text-white'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
-                      }`}
-                    >
-                      <Navigation className="w-3.5 h-3.5" />
-                      <span>{order.status === 'DELIVERED' ? 'Delivered ✓' : 'Dispatch & Transit'}</span>
-                    </button>
+                    {userRole === 'ganesh' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          showToast(`📦 Inbound delivery acknowledged for store order #${order.id}`);
+                        }}
+                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          order.status === 'DELIVERED'
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                            : isDay
+                            ? 'btn-navy text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{order.status === 'DELIVERED' ? 'Store Received ✓' : 'Acknowledge Inbound'}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSimulateDelivery(order)}
+                        disabled={isSimulatingThis || order.status === 'DELIVERED'}
+                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          order.status === 'DELIVERED'
+                            ? 'opacity-50 cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                            : isDay
+                            ? 'btn-navy text-white'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                        }`}
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>{order.status === 'DELIVERED' ? 'Delivered ✓' : 'Dispatch & Transit'}</span>
+                      </button>
+                    )}
 
                     <button
                       type="button"
@@ -823,58 +816,98 @@ export const SmartDispatchView: React.FC<SmartDispatchViewProps> = ({
                         )}
                       </div>
 
-                      {/* Dropdown for Manual Driver Selection */}
-                      <div className="relative">
-                        <select
-                          value={order.assignedDriverId || ''}
-                          onChange={(e) => handleReassign(order.id, e.target.value)}
-                          className={`w-full p-2.5 rounded-xl text-xs font-semibold border cursor-pointer appearance-none pr-8 ${
-                            isDay
-                              ? 'bg-white text-slate-800 border-slate-300 focus:border-indigo-600'
-                              : 'bg-slate-800 text-slate-100 border-slate-700 focus:border-indigo-400'
-                          }`}
-                        >
-                          <option value="" disabled>
-                            -- Select Native Driver --
-                          </option>
-                          {drivers.map((d) => {
-                            const evalMatch = calculateNativeAffinity(order, d);
-                            return (
-                              <option key={d.id} value={d.id}>
-                                {d.name} ({d.nativeCity} - {evalMatch.score}% Match | {d.vehicleName})
-                              </option>
-                            );
-                          })}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
-                      </div>
-
-                      {/* Auto-Suggestion Route Hint banner */}
-                      {suggestedMatch.driver && (
-                        <div className={`mt-2 p-2.5 rounded-xl border text-[11px] flex items-center justify-between gap-2 ${
-                          isDay ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900' : 'bg-indigo-950/30 border-indigo-800/60 text-indigo-200'
+                      {userRole === 'ganesh' ? (
+                        <div className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
+                          isDay ? 'bg-amber-50/80 border-amber-200' : 'bg-amber-950/20 border-amber-800/60'
                         }`}>
-                          <div className="min-w-0">
-                            <span className="font-bold flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                              Auto-Suggested Route:
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                              <Truck className="w-3.5 h-3.5" /> Assigned Carrier Partner
                             </span>
-                            <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
-                              {suggestedMatch.driver.name} ({suggestedMatch.driver.nativeCity}) • {suggestedMatch.score}% Match
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5">
+                              {assignedDriver ? `${assignedDriver.name} (${assignedDriver.vehicleName})` : 'Awaiting Hub Carrier'}
                             </p>
                           </div>
-                          {order.assignedDriverId !== suggestedMatch.driver.id && (
-                            <button
-                              type="button"
-                              onClick={() => handleReassign(order.id, suggestedMatch.driver!.id)}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 cursor-pointer ${
-                                isDay ? 'btn-navy text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                              }`}
-                            >
-                              Apply Route
-                            </button>
+                          {assignedDriver && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => showToast(`📞 Calling driver ${assignedDriver.name} at ${assignedDriver.phone}...`)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                                  isDay ? 'btn-navy text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                }`}
+                              >
+                                <Phone className="w-3 h-3" /> Call
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => showToast(`📍 Sent store landmark directions to ${assignedDriver.name}`)}
+                                className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                                  isDay ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-slate-800 border-slate-700 text-slate-200'
+                                }`}
+                                title="Send Landmark Directions"
+                              >
+                                <Navigation className="w-3 h-3 text-cyan-500" />
+                              </button>
+                            </div>
                           )}
                         </div>
+                      ) : (
+                        <>
+                          {/* Dropdown for Manual Driver Selection */}
+                          <div className="relative">
+                            <select
+                              value={order.assignedDriverId || ''}
+                              onChange={(e) => handleReassign(order.id, e.target.value)}
+                              className={`w-full p-2.5 rounded-xl text-xs font-semibold border cursor-pointer appearance-none pr-8 ${
+                                isDay
+                                  ? 'bg-white text-slate-800 border-slate-300 focus:border-indigo-600'
+                                  : 'bg-slate-800 text-slate-100 border-slate-700 focus:border-indigo-400'
+                              }`}
+                            >
+                              <option value="" disabled>
+                                -- Select Native Driver --
+                              </option>
+                              {drivers.map((d) => {
+                                const evalMatch = calculateNativeAffinity(order, d);
+                                return (
+                                  <option key={d.id} value={d.id}>
+                                    {d.name} ({d.nativeCity} - {evalMatch.score}% Match | {d.vehicleName})
+                                  </option>
+                                );
+                              })}
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
+                          </div>
+
+                          {/* Auto-Suggestion Route Hint banner */}
+                          {suggestedMatch.driver && (
+                            <div className={`mt-2 p-2.5 rounded-xl border text-[11px] flex items-center justify-between gap-2 ${
+                              isDay ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900' : 'bg-indigo-950/30 border-indigo-800/60 text-indigo-200'
+                            }`}>
+                              <div className="min-w-0">
+                                <span className="font-bold flex items-center gap-1">
+                                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                                  Auto-Suggested Route:
+                                </span>
+                                <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                                  {suggestedMatch.driver.name} ({suggestedMatch.driver.nativeCity}) • {suggestedMatch.score}% Match
+                                </p>
+                              </div>
+                              {order.assignedDriverId !== suggestedMatch.driver.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReassign(order.id, suggestedMatch.driver!.id)}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 cursor-pointer ${
+                                    isDay ? 'btn-navy text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                                  }`}
+                                >
+                                  Apply Route
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 

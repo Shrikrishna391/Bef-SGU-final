@@ -195,22 +195,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-extrabold text-xl tracking-tight text-[#0a192f]">
                 HETVAYA
               </span>
-              <span className="text-[10px] uppercase tracking-widest font-bold px-1.5 py-0.5 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded">
-                v1.5
-              </span>
             </div>
-            <p className="text-[11px] text-slate-400 leading-tight">
-              Distribution Intelligence
-            </p>
           </div>
-        </div>
-
-        {/* Hackathon Micro Badge */}
-        <div className="px-2.5 py-1.5 rounded-lg bg-indigo-950/40 border border-indigo-800/40 flex items-center justify-between text-[11px]">
-          <span className="text-indigo-300 font-semibold flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Problem Statement 2
-          </span>
-          <span className="text-[10px] text-slate-400 font-mono">FMCG</span>
         </div>
 
         {/* User Persona Switcher Card */}
@@ -320,11 +306,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{queuedEventCount} queued</span>
               <span className="underline ml-0.5">Process</span>
             </button>
-          ) : (
-            <span className="text-[10px] text-slate-500 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500/70" /> Queue empty
-            </span>
-          )}
+          ) : null}
         </div>
 
         {/* Navigation Categories */}
@@ -352,15 +334,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-indigo-400'}`} />
                         <span>{item.label}</span>
                       </div>
-                      {item.badge && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${
-                          isActive
-                            ? 'bg-indigo-700/80 text-indigo-100'
-                            : 'bg-slate-800 text-slate-400 group-hover:text-slate-300'
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
                     </button>
                   );
                 })}
@@ -433,15 +406,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        <p className="text-[10px] text-center text-slate-500 pt-1">
-          {userRole === 'ganesh'
-            ? 'STORE-MH-KOL-001 • Offline SQLite Engine'
-            : userRole === 'sunita'
-            ? 'Pune Central Hub (W-PUN) • FEFO Enforced'
-            : userRole === 'priya'
-            ? 'System Admin Audit • Zero Data Loss'
-            : 'Marginal-Value Engine • scikit-learn 1.9'}
-        </p>
+
       </div>
     </div>
   );
@@ -465,9 +430,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <span className="font-extrabold text-base tracking-tight text-white">
               HETVAYA
-            </span>
-            <span className="text-[9px] uppercase tracking-wider ml-1.5 font-bold px-1 py-0.5 bg-indigo-950 text-indigo-400 border border-indigo-800 rounded">
-              v1.5
             </span>
           </div>
         </div>

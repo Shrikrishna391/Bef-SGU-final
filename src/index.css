@@ -369,3 +369,5 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+.theme-day .context-title > span:nth-child(n + 4) { display: none; }

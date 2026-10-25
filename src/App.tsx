@@ -49,7 +49,7 @@ import {
   processEventQueue
 } from './services/offlineSyncService';
 import { FlowGridAPI, BackendHealthStatus, setActiveUserRole } from './services/api';
-import { PLAN_HORIZON_DAYS, SYNTHETIC_SALES_PANEL } from './data/demoScope';
+import { PLAN_HORIZON_DAYS } from './data/demoScope';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('plans');
@@ -64,16 +64,16 @@ export const App: React.FC = () => {
     setActiveUserRole(newRole);
     if (newRole === 'rohit') {
       setActiveTab('plans');
-      setRoleNotice('✓ Switched to Rohit Deshpande (Distribution Planner) • Scope: Statewide Allocation Matrix');
+      setRoleNotice('Switched to Rohit Deshpande');
     } else if (newRole === 'sunita') {
       setActiveTab('warehouse');
-      setRoleNotice('✓ Switched to Sunita Deshmukh (Warehouse Manager) • Scope: Pune Hub (W-PUN) Batches & Dock');
+      setRoleNotice('Switched to Sunita Deshmukh');
     } else if (newRole === 'ganesh') {
       setActiveTab('retailer');
-      setRoleNotice('✓ Switched to Ganesh Patil (Kirana Store Owner) • Scope: Kolhapur Store (STORE-MH-KOL-001)');
+      setRoleNotice('Switched to Ganesh Patil');
     } else if (newRole === 'priya') {
       setActiveTab('health');
-      setRoleNotice('✓ Switched to Priya Sharma (System Administrator) • Scope: Systemwide Governance & Audit');
+      setRoleNotice('Switched to Priya Sharma');
     }
     setTimeout(() => setRoleNotice(null), 4500);
   };
@@ -566,103 +566,29 @@ export const App: React.FC = () => {
         }`}>
           {/* Top Info Bar */}
           <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-6 py-2 border-b border-slate-100 dark:border-slate-800/60">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="context-title flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className={`font-bold capitalize ${theme === 'day' ? 'text-[#0a192f]' : 'text-white'}`}>
-                {activeTab === 'plans' ? 'Allocation Plan & AI Engine' :
-                 activeTab === 'forecast' ? 'Demand Forecasting Intelligence' :
-                 activeTab === 'map' ? 'Demand Map Intelligence' :
-                 activeTab === 'benchmark' ? 'Baseline Impact Benchmark' :
-                 activeTab === 'dispatch' ? 'Smart Delivery Agent & Native Driver Dispatch' :
-                 activeTab === 'warehouse' ? 'Warehouse Picking & Operations' :
-                 activeTab === 'retailer' ? 'Kirana Field POS & Capture' :
-                 activeTab === 'import' ? 'Master Data Import Studio' :
-                 'System Health & Monitoring'}
+                {activeTab === 'plans' ? 'Allocation plan' :
+                 activeTab === 'forecast' ? 'Demand forecast' :
+                 activeTab === 'map' ? 'Demand map' :
+                 activeTab === 'benchmark' ? 'Impact benchmark' :
+                 activeTab === 'dispatch' ? 'Delivery dispatch' :
+                 activeTab === 'warehouse' ? 'Warehouse operations' :
+                 activeTab === 'retailer' ? 'Kirana POS' :
+                 activeTab === 'import' ? 'Data import' :
+                 'System health'}
               </span>
               <span className="text-slate-400">•</span>
               <span className="text-slate-500">{PLAN_HORIZON_DAYS}-day planning horizon</span>
-              <span className="text-slate-400">•</span>
-              <span className="text-indigo-600 dark:text-indigo-300 font-mono text-[11px]">Maharashtra Logistics Grid</span>
+
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-bold text-amber-900">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Day Mode
-              </span>
-            </div>
+
           </div>
 
-          {/* Persona Scope Ribbon */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2 bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-200/60 dark:border-slate-800/60">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Active User &amp; Scope:
-              </span>
-              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl border font-bold text-xs ${
-                userRole === 'rohit'
-                  ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
-                  : userRole === 'sunita'
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                  : userRole === 'ganesh'
-                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                  : 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
-              }`}>
-                {userRole === 'rohit' ? <Cpu className="w-3.5 h-3.5 text-indigo-500" /> :
-                 userRole === 'sunita' ? <WarehouseIcon className="w-3.5 h-3.5 text-emerald-500" /> :
-                 userRole === 'ganesh' ? <Store className="w-3.5 h-3.5 text-amber-500" /> :
-                 <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />}
-                <span>
-                  {userRole === 'rohit' ? 'Rohit Deshpande (Distribution Planner)' :
-                   userRole === 'sunita' ? 'Sunita Deshmukh (Warehouse Manager)' :
-                   userRole === 'ganesh' ? 'Ganesh Patil (Kirana Store Owner)' :
-                   'Priya Sharma (System Administrator)'}
-                </span>
-                <span className="opacity-60">•</span>
-                <span className="font-mono text-[11px]">
-                  {userRole === 'rohit' ? 'Statewide Planning Scope' :
-                   userRole === 'sunita' ? 'Pune Hub (W-PUN) Scope' :
-                   userRole === 'ganesh' ? 'Kolhapur Store (STORE-MH-KOL-001) Scope' :
-                   'Systemwide Administration Scope'}
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Switch Persona Buttons with Dynamic Icons */}
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <span className="text-slate-400 mr-1 font-medium">Switch Persona:</span>
-              {([
-                { id: 'rohit' as UserRole, label: 'Rohit (Planner)', Icon: Cpu },
-                { id: 'sunita' as UserRole, label: 'Sunita (Pune Hub)', Icon: WarehouseIcon },
-                { id: 'ganesh' as UserRole, label: 'Ganesh (Kirana)', Icon: Store },
-                { id: 'priya' as UserRole, label: 'Priya (Admin)', Icon: ShieldCheck },
-              ]).map(({ id: r, label, Icon }) => {
-                const isSelected = userRole === r;
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => handleRoleChange(r)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      isSelected
-                        ? theme === 'day'
-                          ? 'btn-navy text-white shadow-sm ring-2 ring-indigo-400/50'
-                          : 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/50'
-                        : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {isSelected ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Icon className="w-3.5 h-3.5 opacity-70" />
-                    )}
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
-        {/* Main Content Area */}
+                {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* View Switcher based on Active Tab */}
           {activeTab === 'plans' && (
@@ -755,11 +681,9 @@ export const App: React.FC = () => {
         <footer className="border-t border-slate-900 bg-slate-950/80 py-5 text-xs text-slate-500 mt-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p>
-              HETVAYA Distribution Intelligence &amp; Inventory Optimization Engine • Problem Statement 2 (FMCG)
+              HETVAYA · Distribution Planning
             </p>
-            <p className="text-[11px] text-slate-600">
-              Greedy Marginal Allocation • Scikit-learn Quantile ML • React 19 • Offline Resilient Event Queue
-            </p>
+
             <a href="/" className="text-indigo-300 hover:text-white transition-colors">
               Landing page
             </a>

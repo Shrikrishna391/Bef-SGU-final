@@ -196,19 +196,14 @@ export const ImportStudioView: React.FC = () => {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold text-white tracking-tight">
-              Data Import Studio — 5% Rule &amp; Schema Validation
+              Data import
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
               5% Rule Enforced
             </span>
-            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-              Priya Sharma (Admin) &amp; Rohit (Planner)
-            </span>
+
           </div>
-          <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-            CSV upload, column schema mapping, and source information validation.
-            If &gt;5% rows are invalid, publication is blocked. If &le;5% are invalid, bad rows are quarantined for review while clean rows can be committed.
-          </p>
+
         </div>
 
         {/* Source System & Entity Controls */}

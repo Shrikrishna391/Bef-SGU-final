@@ -10,7 +10,9 @@ import {
   Info,
   Calendar,
   Layers,
-  Sparkles
+  Sparkles,
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 import {
   AreaChart,
@@ -76,6 +78,8 @@ export const ForecastReviewView: React.FC<ForecastReviewViewProps> = ({
   ];
 
   const filteredForecasts = forecasts.filter(f => {
+    if (userRole === 'ganesh' && f.retailerId !== 'RET-GAN') return false;
+    if (userRole === 'sunita' && !['RET-GAN', 'RET-DMA'].includes(f.retailerId)) return false;
     if (filterMethod !== 'all' && f.method !== filterMethod) return false;
     if (showStockoutCorrectedOnly && !f.stockoutCorrected) return false;
     return true;
@@ -83,94 +87,116 @@ export const ForecastReviewView: React.FC<ForecastReviewViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Persona Scope Scoping Banner */}
-      {userRole === 'ganesh' && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-sm">
-              G
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-amber-300 text-sm">
-                  Store Forecast Scope: Ganesh Patil (Kolhapur STORE-MH-KOL-001)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  OWN STORE DEMAND
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Displaying P50 median demand and P90 replenishment buffers specifically for Ganesh Kirana (Kolhapur). Retailer selection is locked to your store.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 whitespace-nowrap">
-            Store Quantiles Active
-          </span>
-        </div>
-      )}
-
-      {userRole === 'sunita' && (
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-              S
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-emerald-300 text-sm">
-                  Warehouse Demand Aggregation: Sunita Deshmukh (Pune Hub W-PUN)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                  PUNE HUB INTAKE
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Monitoring aggregate downstream retail demand across Western Maharashtra to schedule physical FEFO inward receipts and lot reservation.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
-            Hub Aggregation View
-          </span>
-        </div>
-      )}
-
       {/* Header Overview */}
       <div className={`p-6 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all ${
         isDay ? 'bg-white border-slate-200 shadow-sm text-slate-800' : 'glass-panel border-slate-800 text-white'
       }`}>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className={`text-xl font-bold tracking-tight ${isDay ? 'text-[#0a192f]' : 'text-white'}`}>
-              AI Demand Intelligence & Quantile Forecasts
+              {userRole === 'ganesh'
+                ? 'Store Demand AI Forecast'
+                : userRole === 'sunita'
+                ? 'Downstream Demand Intake Curve'
+                : userRole === 'priya'
+                ? 'Demand ML Governance & Calibration'
+                : 'Demand Forecast & Quantile Fan'}
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
-              FR-08 Quantile ML
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+              userRole === 'ganesh'
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                : userRole === 'sunita'
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : userRole === 'priya'
+                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+            }`}>
+              {userRole === 'ganesh'
+                ? 'Kolhapur Store Scope'
+                : userRole === 'sunita'
+                ? 'Pune Hub Outbound Scope'
+                : userRole === 'priya'
+                ? 'Governance Tier-1'
+                : 'Statewide ML Model'}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            7-day replenishment cycle quantiles (p10 to p95) • Scikit-learn HistGradientBoosting vs 4-week Moving Average Baseline • Stockout Day Correction (RC2)
+            {userRole === 'ganesh'
+              ? 'Store run-rate and safety stock buffer predictions based on local Kirana velocity.'
+              : userRole === 'sunita'
+              ? 'Aggregated downstream demand intake for Pune hub outbound fulfillment planning.'
+              : userRole === 'priya'
+              ? 'Model accuracy (WAPE, bias, pinball loss) across all regional deployment zones.'
+              : 'Quantile fan spread (10th percentile floor to 95th percentile peak) feeding MIP solver.'}
           </p>
         </div>
 
-        {/* Forecast Health Badge */}
-        <div className={`flex items-center gap-3 border px-3 py-2 rounded-xl ${
-          isDay ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'
-        }`}>
-          <div className="text-right">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Model WAPE</span>
-            <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">14.2%</span>
-          </div>
-          <div className={`h-6 w-px ${isDay ? 'bg-slate-200' : 'bg-slate-800'}`} />
-          <div className="text-right">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Coverage (p95)</span>
-            <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">94.3%</span>
-          </div>
-          <div className={`h-6 w-px ${isDay ? 'bg-slate-200' : 'bg-slate-800'}`} />
-          <div className="text-right">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Bias</span>
-            <span className={`text-sm font-extrabold ${isDay ? 'text-slate-800' : 'text-slate-200'}`}>+0.0%</span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Persona-specific action button */}
+          {userRole === 'ganesh' ? (
+            <button
+              type="button"
+              onClick={() => alert('🔄 Syncing Kirana store demand AI with counter sales...')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isDay ? 'btn-navy text-white' : 'bg-amber-600 hover:bg-amber-500 text-white'
+              }`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Sync Store Run-Rate</span>
+            </button>
+          ) : userRole === 'sunita' ? (
+            <button
+              type="button"
+              onClick={() => alert('📦 Downstream demand curves synchronized with Pune dock picklists.')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isDay ? 'btn-navy text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Sync Dock Intake</span>
+            </button>
+          ) : userRole === 'priya' ? (
+            <button
+              type="button"
+              onClick={() => alert('🛡️ Model calibration log exported for governance review.')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isDay ? 'btn-navy text-white' : 'bg-purple-600 hover:bg-purple-500 text-white'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Export Calibration Log</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => alert('✨ ML Quantile Predictor retrained with latest 84-day telemetry.')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isDay ? 'btn-navy text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Retrain ML Predictor</span>
+            </button>
+          )}
+
+          {/* Forecast Health Badge */}
+          <div className={`flex items-center gap-3 border px-3 py-2 rounded-xl ${
+            isDay ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'
+          }`}>
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Model WAPE</span>
+              <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">14.2%</span>
+            </div>
+            <div className={`h-6 w-px ${isDay ? 'bg-slate-200' : 'bg-slate-800'}`} />
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Coverage (p95)</span>
+              <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">94.3%</span>
+            </div>
+            <div className={`h-6 w-px ${isDay ? 'bg-slate-200' : 'bg-slate-800'}`} />
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Bias</span>
+              <span className={`text-sm font-extrabold ${isDay ? 'text-slate-800' : 'text-slate-200'}`}>+0.0%</span>
+            </div>
           </div>
         </div>
       </div>

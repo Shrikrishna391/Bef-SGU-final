@@ -208,85 +208,6 @@ export const WarehouseOpsView: React.FC<WarehouseOpsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Persona Scope Guardrail Banners */}
-      {userRole === 'ganesh' && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-sm">
-              G
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-amber-300 text-sm">
-                  Access Restricted: Ganesh Patil (Kirana Store Owner)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  READ-ONLY AUDIT
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Physical warehouse dock operations are restricted to warehouse managers. You can manage your store counter sales, product returns, and store stock in <strong>Kirana Field POS</strong>.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 whitespace-nowrap">
-            Warehouse Actions Disabled
-          </span>
-        </div>
-      )}
-
-      {userRole === 'sunita' && (
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-              S
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-emerald-300 text-sm">
-                  Active Scope: Sunita Deshmukh — Warehouse Manager (Pune Hub W-PUN)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                  PUNE HUB DOCK AUTHORITY
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Full authority for physical batch inward (GRN), FEFO picking, dispatch confirmation, and reason-coded stock adjustments for Pune Hub.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
-            Full Dock Control Active
-          </span>
-        </div>
-      )}
-
-      {userRole === 'rohit' && (
-        <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-sm">
-              R
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-indigo-300 text-sm">
-                  Planner Audit Mode: Rohit Deshpande (Distribution Planner)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono">
-                  READ-ONLY AUDIT
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Viewing warehouse physical stock levels. Silent batch stock editing is blocked; dock adjustments must be executed by Sunita Deshmukh with reason codes.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 whitespace-nowrap">
-            Planner Audit View
-          </span>
-        </div>
-      )}
-
       {/* Top Header */}
       <div className={`p-6 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all ${
         isDay ? 'bg-white border-slate-200 shadow-sm text-slate-800' : 'glass-panel border-slate-800 text-white'
@@ -294,19 +215,14 @@ export const WarehouseOpsView: React.FC<WarehouseOpsViewProps> = ({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className={`text-xl font-bold tracking-tight ${isDay ? 'text-[#0a192f]' : 'text-white'}`}>
-              Warehouse Ops — FEFO Picking &amp; Receipt Console
+              Warehouse operations
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
               FEFO Enforced
             </span>
-            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
-              Sunita Deshmukh (Scope: Pune Hub W-PUN)
-            </span>
+
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-            Goods receipt (GRN), lot/batch tracking, expiry dates, physical stock counts, and picking.
-            Stock adjustments are reason-coded and protected against silent planner edits.
-          </p>
+
         </div>
 
         {/* Warehouse Selector & GRN Action */}

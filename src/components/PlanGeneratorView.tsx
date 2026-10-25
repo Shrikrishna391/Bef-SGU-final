@@ -356,111 +356,6 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Persona Scope Guardrail Banner */}
-      {userRole === 'sunita' && (
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-              S
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-emerald-300 text-sm">
-                  Sunita Deshmukh — Warehouse Manager (Pune Hub W-PUN)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                  PUNE DOCK SCOPE
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Showing {personaScopedLines.length} outbound allocation lines originating from Pune Central Logistics Hub. Non-Pune lines are hidden per role scope.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
-            Dock Picking &amp; Dispatches Active
-          </span>
-        </div>
-      )}
-
-      {userRole === 'ganesh' && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-sm">
-              G
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-amber-300 text-sm">
-                  Ganesh Patil — Kirana Store Owner (Kolhapur STORE-MH-KOL-001)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  KIRANA INBOUND SCOPE
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Showing {personaScopedLines.length} incoming allocations reserved for Ganesh Kirana &amp; General Store. Transaction data for other stores is restricted.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 whitespace-nowrap">
-            Inbound Delivery Stream
-          </span>
-        </div>
-      )}
-
-      {userRole === 'rohit' && (
-        <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-sm">
-              R
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-indigo-300 text-sm">
-                  Rohit Deshpande — Distribution Planner (Statewide Planning)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono">
-                  STATEWIDE SCOPE
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Statewide multi-warehouse allocation matrix active across 3 hubs and 10 kirana stores ({personaScopedLines.length} total lines). Planning objectives and route-risk tolerances configurable below.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 whitespace-nowrap">
-            Optimization Engine Active
-          </span>
-        </div>
-      )}
-
-      {userRole === 'priya' && (
-        <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold text-sm">
-              P
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-purple-300 text-sm">
-                  Priya Sharma — System Administrator (Systemwide Governance)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono">
-                  ADMINISTRATIVE OVERVIEW
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Systemwide administrative inspection mode. All allocation overrides and security changes are recorded in the immutable audit log.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 whitespace-nowrap">
-            Audit Trail Logging
-          </span>
-        </div>
-      )}
-
       {/* Top Action Console */}
       <div className="glass-panel p-6 rounded-2xl border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div>
@@ -477,15 +372,10 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
                     : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                 }`}
               >
-                {planRun.solverStatus}{planRun.solveSeconds !== undefined
-                  ? ` · ${(planRun.solveSeconds * 1000).toFixed(2)} ms local decision calculation`
-                  : ' · timing not reported by API'}
-              </span>
+                {planRun.solverStatus}</span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-            Greedy Marginal-Value Allocation • Value-Tier Objective • Hard Constraints: Zero Negative Stock, Shelf-Life on Arrival &ge; 70%, Kirana Storage Limits
-          </p>
+
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
@@ -606,38 +496,11 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
                 <Sliders className="w-3.5 h-3.5" />
-                Planning Objectives &amp; Optimization Parameters
+                Planning settings
               </span>
-              <span className="text-xs text-slate-500">
-                • Persona:{' '}
-                <strong className={
-                  userRole === 'sunita'
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : userRole === 'ganesh'
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : userRole === 'priya'
-                    ? 'text-purple-600 dark:text-purple-400'
-                    : 'text-indigo-600 dark:text-indigo-400'
-                }>
-                  {userRole === 'sunita'
-                    ? 'Sunita Deshmukh (Pune Hub Dispatch Scope)'
-                    : userRole === 'ganesh'
-                    ? 'Ganesh Patil (Kolhapur Kirana Inbound Scope)'
-                    : userRole === 'priya'
-                    ? 'Priya Sharma (Systemwide Audit Scope)'
-                    : 'Rohit Deshpande (Statewide Planning)'}
-                </strong>
-              </span>
+
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              {userRole === 'ganesh' ? (
-                <span>Inbound store replenishment focus for <strong>Ganesh Kirana (Kolhapur)</strong> • Hard Constraint: <strong>&ge;70% Shelf Life on Arrival</strong></span>
-              ) : userRole === 'sunita' ? (
-                <span>Outbound dispatch matrix for <strong>Pune Central Logistics Hub (W-PUN)</strong> • Hard Constraint: <strong>Strict FEFO Picking</strong></span>
-              ) : (
-                <span>Horizon: <strong>{planningHorizonDays} Days</strong> • Target Service Level: <strong>{serviceTargetPct}%</strong> • Route-Risk Tolerance: <strong>{routeRiskTolerance}</strong> • Fleet: <strong>{vehicleSelection === 'MIXED_FLEET' ? 'Mixed FMCG Commercial Fleet' : vehicleSelection}</strong></span>
-              )}
-            </p>
+
           </div>
 
           <div className="flex items-center gap-2 self-stretch lg:self-auto shrink-0">
@@ -662,7 +525,7 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
                 }`}
               >
                 <Sliders className="w-3.5 h-3.5 text-indigo-500" />
-                <span>{isPlannerControlsOpen ? 'Hide Parameters' : 'Adjust Objectives & Parameters'}</span>
+                <span>{isPlannerControlsOpen ? 'Close settings' : 'Edit settings'}</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPlannerControlsOpen ? 'rotate-180' : ''}`} />
               </button>
             )}

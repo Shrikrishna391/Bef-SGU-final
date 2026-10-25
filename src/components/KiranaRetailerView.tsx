@@ -284,85 +284,6 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Persona Scope Scoping Banner */}
-      {userRole === 'ganesh' && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-sm">
-              G
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-amber-300 text-sm">
-                  Active Scope: Ganesh Patil — Kirana Store Owner (Kolhapur STORE-MH-KOL-001)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  OWN STORE POS
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Full authority for counter sales, customer returns, store stock closing counts, and replenishment requests. Transaction data for other stores is restricted.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 whitespace-nowrap">
-            Field POS Active
-          </span>
-        </div>
-      )}
-
-      {userRole === 'sunita' && (
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-              S
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-emerald-300 text-sm">
-                  Warehouse Feed: Sunita Deshmukh (Pune Hub W-PUN)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                  REPLENISHMENT INTAKE
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Viewing Kolhapur store stock levels and incoming replenishment orders to plan outbound picking from Pune Hub.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
-            Warehouse Feed View
-          </span>
-        </div>
-      )}
-
-      {userRole === 'rohit' && (
-        <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-sm">
-              R
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-indigo-300 text-sm">
-                  Planner Telemetry: Rohit Deshpande (Distribution Planner)
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono">
-                  DEMAND TELEMETRY
-                </span>
-              </div>
-              <p className="text-slate-300 text-xs mt-0.5">
-                Monitoring live consumption velocity and daily sales run-rate at Ganesh Kirana for quantile replenishment forecasting.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 whitespace-nowrap">
-            Consumption Stream
-          </span>
-        </div>
-      )}
-
       {/* Top Header */}
       <div className={`p-6 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all ${
         isDay ? 'bg-white border-slate-200 shadow-sm text-slate-800' : 'glass-panel border-slate-800 text-white'
@@ -372,16 +293,10 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
             <h2 className={`text-xl font-bold tracking-tight ${isDay ? 'text-[#0a192f]' : 'text-white'}`}>
               {t.title}
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-              Offline Capable POS
-            </span>
-            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
-              Ganesh Patil (Scope: STORE-MH-KOL-001)
-            </span>
+
+
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-            Store: <strong className={isDay ? 'text-[#0a192f]' : 'text-white'}>{currentRetailer.name}</strong> ({currentRetailer.city}) • Backroom Space: {currentRetailer.storageCases} cases • Min Freshness Policy: {Math.round(currentRetailer.minShelfLifePct * 100)}%
-          </p>
+
         </div>
 
         {/* Language Selector */}
