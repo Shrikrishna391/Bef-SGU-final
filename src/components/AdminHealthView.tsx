@@ -29,7 +29,6 @@ import {
 import { INITIAL_SCHEDULED_JOBS, INITIAL_ALERTS } from '../data/mockData';
 import { ScheduledJob, SystemAlert, UserRole, ThemeMode } from '../types';
 import { FlowGridAPI, BackendHealthStatus, OllamaHealthStatus } from '../services/api';
-import { SmsAlertSettings } from './SmsAlertSettings';
 
 interface AdminHealthViewProps {
   queuedEventCount?: number;
@@ -473,8 +472,6 @@ export const AdminHealthView: React.FC<AdminHealthViewProps> = ({
           <p className="text-[10px] text-slate-400 mt-1">Connector errors &amp; batch age monitored</p>
         </div>
       </div>
-
-      <SmsAlertSettings isDay={isDay} onSaved={showToast} userRole={userRole} />
 
       {/* Navigation Sub-Tabs for System Administrator (Priya Sharma Scope) */}
       <div className={`flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border ${

@@ -19,10 +19,7 @@ import {
   Sparkles,
   Lock,
   Layers,
-  Archive,
-  Bell,
-  Smartphone,
-  ShieldCheck
+  Archive
 } from 'lucide-react';
 import {
   Product,
@@ -35,7 +32,6 @@ import {
   ReplenishmentRequest,
   ThemeMode
 } from '../types';
-import { SmsAlertSettings } from './SmsAlertSettings';
 
 interface KiranaRetailerViewProps {
   currentRetailer: Retailer;
@@ -66,13 +62,7 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
 }) => {
   const isDay = theme === 'day';
   const [lang, setLang] = useState<'en' | 'hi' | 'mr'>('en');
-  const [activeSubTab, setActiveSubTab] = useState<'SALES_RETURNS' | 'STOCK' | 'REPLENISHMENT' | 'DELIVERIES' | 'SMS_ALERTS' | 'SYNC'>('SALES_RETURNS');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+  const [activeSubTab, setActiveSubTab] = useState<'SALES_RETURNS' | 'STOCK' | 'REPLENISHMENT' | 'DELIVERIES' | 'SYNC'>('SALES_RETURNS');
 
   // Sales input state
   const [selectedSaleSku, setSelectedSaleSku] = useState<string>(products[0]?.sku || 'SKU-ATT-05');
@@ -385,17 +375,7 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
         </button>
       </div>
 
-      {/* SMS Smart Alerts Settings Box */}
-      <SmsAlertSettings
-        isDay={isDay}
-        userRole={userRole}
-        onSaved={showToast}
-        title="Kirana Store SMS Notification Settings"
-        subtitle="Get smart alerts on incoming distributor trucks, driver arrival ETA, stock-out warnings, and short shelf-life batches directly to your phone."
-        defaultExpanded={true}
-      />
-
-      {/* Sub-Tabs: Sales & Returns, Stock, Replenishment, Deliveries, SMS Alerts */}
+      {/* Sub-Tabs: Sales & Returns, Stock, Replenishment, Deliveries */}
       <div className={`flex flex-wrap items-center gap-2 border-b pb-2 ${isDay ? 'border-slate-200' : 'border-slate-800'}`}>
         <button
           type="button"
@@ -440,18 +420,6 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
           }`}
         >
           4. Incoming Deliveries ({retailerShipments.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('SMS_ALERTS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeSubTab === 'SMS_ALERTS'
-              ? isDay ? 'btn-navy text-white shadow-sm' : 'bg-indigo-600 text-white'
-              : isDay ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'text-slate-400 hover:text-white bg-slate-900'
-          }`}
-        >
-          <Bell className="w-3.5 h-3.5" />
-          <span>5. SMS Smart Alerts</span>
         </button>
       </div>
 
@@ -893,68 +861,6 @@ export const KiranaRetailerView: React.FC<KiranaRetailerViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 5: SMS Smart Alerts Log & Offline Gateway Status */}
-      {activeSubTab === 'SMS_ALERTS' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
-          <div className="glass-panel p-6 rounded-2xl border-slate-800 space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Smartphone className="w-5 h-5 text-amber-400" />
-              <h3 className="font-bold text-white text-sm">Recent Store SMS Dispatches (Live Stream)</h3>
-            </div>
-            <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <div className="flex items-center justify-between text-slate-400 text-[10px]">
-                  <span className="font-mono font-bold text-emerald-400">DELIVERY DISPATCHED</span>
-                  <span>Today, 10:30 AM</span>
-                </div>
-                <p className="text-white font-medium">[HETVAYA] 🚚 Truck MH-12-RN-4821 dispatched from Pune Hub with 8 cases Refined Oil. ETA Kolhapur: 14:30.</p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <div className="flex items-center justify-between text-slate-400 text-[10px]">
-                  <span className="font-mono font-bold text-amber-400">STOCKOUT BUFFER THRESHOLD</span>
-                  <span>Yesterday, 18:45 PM</span>
-                </div>
-                <p className="text-white font-medium">[HETVAYA] ⚠️ Aashirvaad Atta 5kg below safety buffer (18 units remaining). 24h restock order recommended.</p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <div className="flex items-center justify-between text-slate-400 text-[10px]">
-                  <span className="font-mono font-bold text-cyan-400">FEFO SHELF-LIFE PASS</span>
-                  <span>Yesterday, 14:10 PM</span>
-                </div>
-                <p className="text-white font-medium">[HETVAYA] ✓ Delivery received: 6 cases Parle-G with 88% remaining shelf life verified at counter.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-panel p-6 rounded-2xl border-slate-800 space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <ShieldCheck className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-bold text-white text-sm">Carrier GSM Gateway &amp; Zero-Drop Reliability</h3>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              When 4G/cellular internet drops in rural Kolhapur, HETVAYA's edge architecture dispatches critical alerts over standard carrier GSM SMS networks, ensuring you never miss an incoming shipment or urgent stockout warning.
-            </p>
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
-              <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
-              <div>
-                <p className="font-bold text-emerald-200">Airtel / Jio / Vi Multi-Gateway Active</p>
-                <p className="text-[11px] text-emerald-400/80">99.98% delivery rate with automatic carrier fallback</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0a192f] text-white border border-amber-400/40 shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
-          <span className="text-xs font-semibold">{toastMessage}</span>
         </div>
       )}
     </div>

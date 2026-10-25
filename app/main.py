@@ -79,21 +79,6 @@ from app.api.v1.router import api_router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(api_router, include_in_schema=False)  # Direct route aliases without /api/v1 prefix
 
-# Mount HETVAYA Chatbot Package Router
-try:
-    from hetvaya_chatbot_package.backend.router import router as chatbot_router
-    app.include_router(chatbot_router, prefix="/api")
-    app.include_router(chatbot_router, prefix=settings.API_V1_STR)
-    
-    @app.post("/chat", include_in_schema=False)
-    def chat_root_alias(payload: dict):
-        from hetvaya_chatbot_package.backend.chat_service import ProductChatIntelligenceService
-        from hetvaya_chatbot_package.backend.schemas import ChatQueryRequest
-        req = ChatQueryRequest(**payload)
-        return ProductChatIntelligenceService.process_chat_query(payload=req, db=None)
-except Exception as e:
-    logger.warning("Notice on mounting hetvaya_chatbot_package router: %s", e)
-
 
 @app.get("/")
 def root():

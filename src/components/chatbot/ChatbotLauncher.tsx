@@ -49,7 +49,7 @@ export const ChatbotLauncher: React.FC<ChatbotLauncherProps> = ({
     <>
       {/* Kept mounted so the conversation survives closing the panel */}
       <div
-        className={`fixed bottom-20 left-4 sm:left-5 z-50 w-[calc(100vw-2rem)] sm:w-[440px] h-[min(640px,calc(100vh-7rem))] shadow-2xl rounded-2xl ${
+        className={`fixed bottom-20 right-4 sm:right-5 z-50 w-[calc(100vw-2rem)] sm:w-[440px] h-[min(640px,calc(100vh-7rem))] shadow-2xl rounded-2xl ${
           open ? 'block animate-in fade-in slide-in-from-bottom-4 duration-200' : 'hidden'
         }`}
       >
@@ -65,7 +65,7 @@ export const ChatbotLauncher: React.FC<ChatbotLauncherProps> = ({
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-label={open ? 'Close HETVAYA AI assistant' : 'Open HETVAYA AI assistant'}
-        className="fixed bottom-4 left-4 sm:bottom-5 sm:left-5 z-50 w-14 h-14 rounded-full bg-gradient-to-tr from-[#1E40AF] to-[#3B82F6] hover:from-[#1D4ED8] hover:to-[#2563EB] text-white flex items-center justify-center shadow-2xl shadow-blue-600/40 cursor-pointer transition-all hover:scale-105 active:scale-95 group"
+        className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 w-14 h-14 rounded-full bg-gradient-to-tr from-[#1E40AF] to-[#3B82F6] hover:from-[#1D4ED8] hover:to-[#2563EB] text-white flex items-center justify-center shadow-2xl shadow-blue-600/40 cursor-pointer transition-all hover:scale-105 active:scale-95 group"
         title="Open HETVAYA Product AI Assistant"
       >
         {open ? <X className="w-6 h-6" /> : <Bot className="w-6 h-6 transition-transform group-hover:scale-110" />}
@@ -76,7 +76,7 @@ export const ChatbotLauncher: React.FC<ChatbotLauncherProps> = ({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-4 left-20 sm:bottom-5 sm:left-22 z-50 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-900/95 text-white border border-indigo-500/40 shadow-2xl text-xs font-bold hover:bg-slate-800 transition-all cursor-pointer backdrop-blur-md group animate-in fade-in duration-300"
+          className="fixed bottom-4 right-20 sm:bottom-5 sm:right-22 z-50 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-900/95 text-white border border-indigo-500/40 shadow-2xl text-xs font-bold hover:bg-slate-800 transition-all cursor-pointer backdrop-blur-md group animate-in fade-in duration-300"
           title="Click to query FMCG inventory, FEFO batch risks, freight rates & allocations"
         >
           <span className="relative flex h-2.5 w-2.5">

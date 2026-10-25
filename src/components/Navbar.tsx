@@ -23,12 +23,12 @@ import {
   UserCheck,
   Truck,
   RotateCcw,
-  Bot,
-  Smartphone
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 import { UserRole } from '../types';
 
-export type ActiveTab = 'plans' | 'forecast' | 'map' | 'benchmark' | 'warehouse' | 'retailer' | 'dispatch' | 'import' | 'health';
+export type ActiveTab = 'plans' | 'forecast' | 'map' | 'benchmark' | 'warehouse' | 'retailer' | 'dispatch' | 'import' | 'health' | 'notifications';
 
 interface NavbarProps {
   activeTab: ActiveTab;
@@ -41,8 +41,6 @@ interface NavbarProps {
   onOpenDemoModal: () => void;
   onOpenWhatIfModal: () => void;
   onTriggerSync: () => void;
-  onOpenChatbot?: () => void;
-  isChatbotOpen?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,8 +54,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDemoModal,
   onOpenWhatIfModal,
   onTriggerSync,
-  onOpenChatbot,
-  isChatbotOpen,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
@@ -108,6 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               { id: 'plans' as ActiveTab, label: 'Inbound Store Orders', icon: Boxes, badge: 'Inbound' },
               { id: 'forecast' as ActiveTab, label: 'Store Demand AI', icon: TrendingUp, badge: 'Local ML' },
               { id: 'dispatch' as ActiveTab, label: 'Incoming Delivery Tracker', icon: Truck, badge: 'Kolhapur' },
+              { id: 'notifications' as ActiveTab, label: 'Store SMS Alerts', icon: Bell, badge: 'Twilio' },
             ],
           },
         ];
@@ -120,6 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               { id: 'dispatch' as ActiveTab, label: 'Pune Fleet Dispatch', icon: Truck, badge: 'Native AI' },
               { id: 'plans' as ActiveTab, label: 'Pune Outbound Plan', icon: Cpu, badge: 'Outbound' },
               { id: 'forecast' as ActiveTab, label: 'Downstream Demand Intake', icon: TrendingUp, badge: 'Pune Hub' },
+              { id: 'notifications' as ActiveTab, label: 'Warehouse SMS Alerts', icon: Bell, badge: 'Twilio' },
             ],
           },
         ];
@@ -129,6 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             label: 'GOVERNANCE & SYSTEM INTEGRITY',
             items: [
               { id: 'health' as ActiveTab, label: 'System Health & Alerts', icon: Activity, badge: 'API Mon' },
+              { id: 'notifications' as ActiveTab, label: 'Twilio SMS & Alert Center', icon: Bell, badge: 'Gateway' },
               { id: 'import' as ActiveTab, label: 'Data Import Studio', icon: UploadCloud, badge: '5% Rule' },
               { id: 'plans' as ActiveTab, label: 'Allocation Audit Matrix', icon: Cpu, badge: 'Audit' },
             ],
@@ -155,9 +154,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             ],
           },
           {
-            label: 'SUPPLY CHAIN EXECUTION',
+            label: 'SUPPLY CHAIN EXECUTION & NOTIFICATIONS',
             items: [
               { id: 'dispatch' as ActiveTab, label: 'Smart Delivery Agent', icon: Truck, badge: 'Native AI' },
+              { id: 'notifications' as ActiveTab, label: 'SMS & Incident Alerts Hub', icon: Bell, badge: 'Twilio' },
               { id: 'warehouse' as ActiveTab, label: 'Warehouse Stock Audit', icon: WarehouseIcon, badge: 'Audit FEFO' },
             ],
           },
@@ -412,58 +412,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        {/* HETVAYA FMCG AI Assistant Trigger */}
-        <button
-          type="button"
-          onClick={() => {
-            if (onOpenChatbot) onOpenChatbot();
-            setMobileMenuOpen(false);
-          }}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer group ${
-            isChatbotOpen
-              ? 'bg-blue-600 text-white shadow-blue-600/30 ring-2 ring-blue-400/50'
-              : 'text-blue-200 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 hover:from-blue-900/60 hover:to-indigo-900/60 border border-blue-500/30'
-          }`}
-          title="Open HETVAYA FMCG Product AI Assistant"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="w-5 h-5 rounded-md bg-blue-500/30 flex items-center justify-center border border-blue-400/40">
-              <Sparkles className="w-3 h-3 text-blue-300 animate-pulse" />
-            </div>
-            <span>Ask HETVAYA AI</span>
-          </div>
-          <span className="text-[10px] font-semibold text-blue-300 bg-blue-950/80 px-1.5 py-0.5 rounded border border-blue-700/60 font-mono">
-            Assistant
-          </span>
-        </button>
 
-        {/* SMS Smart Alerts Navigation Button */}
-        <button
-          type="button"
-          onClick={() => {
-            setMobileMenuOpen(false);
-            const el = document.getElementById('sms-settings-section');
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth' });
-            } else {
-              if (userRole === 'priya') setActiveTab('health');
-              else if (userRole === 'ganesh') setActiveTab('retailer');
-              else if (userRole === 'sunita') setActiveTab('warehouse');
-              else setActiveTab('plans');
-              setTimeout(() => {
-                document.getElementById('sms-settings-section')?.scrollIntoView({ behavior: 'smooth' });
-              }, 250);
-            }
-          }}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-900/60 hover:bg-slate-800/80 hover:text-white border border-slate-800 transition-all cursor-pointer"
-          title="Configure SMS Smart Alerts for your persona"
-        >
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
-            <span>SMS Smart Alerts</span>
-          </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        </button>
       </div>
     </div>
   );
@@ -492,19 +441,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mobile AI Assistant button */}
-          {onOpenChatbot && (
-            <button
-              type="button"
-              onClick={onOpenChatbot}
-              aria-label="Open HETVAYA AI assistant"
-              className="p-1.5 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-300 hover:text-white hover:bg-blue-600/30 transition-all cursor-pointer"
-              title="Open HETVAYA FMCG AI Assistant"
-            >
-              <Bot className="w-4 h-4 text-blue-300" />
-            </button>
-          )}
-
           {/* Online status indicator */}
           <button
             onClick={() => setIsOnline(!isOnline)}
@@ -517,6 +453,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Quick Bell Notifications button */}
+          <button
+            onClick={() => handleTabClick('notifications')}
+            aria-label="Twilio SMS & Notifications"
+            title="Twilio SMS & Notifications Hub"
+            className={`p-1.5 rounded-lg border text-xs relative cursor-pointer ${
+              activeTab === 'notifications'
+                ? 'bg-indigo-600 text-white border-indigo-500'
+                : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
+            }`}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </button>
 
           {/* Persona Avatar with dynamic RoleIcon */}

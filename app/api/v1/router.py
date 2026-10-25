@@ -19,6 +19,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 
 # Core Domain Endpoints
+api_router.include_router(notifications.router)
 api_router.include_router(auth.router)
 api_router.include_router(plans.router)
 api_router.include_router(plans.allocation_router)
@@ -27,7 +28,6 @@ api_router.include_router(sales.router)
 api_router.include_router(forecasts.router)
 api_router.include_router(ai.router)
 api_router.include_router(agents.router)
-api_router.include_router(notifications.router)
 
 api_router.include_router(warehouses.router)
 api_router.include_router(stores.router)

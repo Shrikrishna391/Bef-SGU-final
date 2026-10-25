@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { Warehouse, InventoryBatch, AllocationLine, Product, Retailer, UserRole, GoodsReceiptNote, ThemeMode } from '../types';
 import { INITIAL_BATCHES } from '../data/mockData';
-import { SmsAlertSettings } from './SmsAlertSettings';
 
 interface WarehouseOpsViewProps {
   warehouses: Warehouse[];
@@ -64,12 +63,6 @@ export const WarehouseOpsView: React.FC<WarehouseOpsViewProps> = ({
 
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [countInput, setCountInput] = useState<number>(0);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
 
   // GRN Modal State
   const [isGrnModalOpen, setIsGrnModalOpen] = useState<boolean>(false);
@@ -302,16 +295,6 @@ export const WarehouseOpsView: React.FC<WarehouseOpsViewProps> = ({
           </button>
         </div>
       )}
-
-      {/* SMS Smart Alerts Settings Box */}
-      <SmsAlertSettings
-        isDay={isDay}
-        userRole={userRole}
-        onSaved={showToast}
-        title="Warehouse Hub SMS Notification Settings"
-        subtitle="Get instant smart alerts on FEFO batch expiries (<30 days), new outbound dispatch orders, gate receipts, and safety buffer stockouts."
-        defaultExpanded={false}
-      />
 
       {/* Warehouse Capacity Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -811,13 +794,6 @@ export const WarehouseOpsView: React.FC<WarehouseOpsViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0a192f] text-white border border-emerald-400/40 shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
-          <span className="text-xs font-semibold">{toastMessage}</span>
         </div>
       )}
     </div>
