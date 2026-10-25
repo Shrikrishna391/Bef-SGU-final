@@ -35,24 +35,24 @@ export interface UserPersonaConfig {
 
 export const PERSONA_MAP: Record<UserRole, UserPersonaConfig> = {
   rohit: {
-    email: 'rohit@flowgrid.internal',
+    email: 'rohit.deshpande@flowgrid.internal',
     role: 'PLANNER',
-    name: 'Rohit Sharma (Supply Chain Planner)',
+    name: 'Rohit Deshpande (Distribution Planner)',
   },
   sunita: {
-    email: 'sunita@flowgrid.internal',
+    email: 'sunita.deshmukh@flowgrid.internal',
     role: 'APPROVER',
-    name: 'Sunita Deshmukh (Warehouse Approver & Mgr)',
+    name: 'Sunita Deshmukh (Warehouse Manager - Pune Hub)',
   },
   ganesh: {
-    email: 'ganesh@flowgrid.internal',
+    email: 'ganesh.patil@flowgrid.internal',
     role: 'OPERATOR',
-    name: 'Ganesh Patil (Kirana Retailer)',
+    name: 'Ganesh Patil (Kirana Store Owner - Kolhapur)',
   },
   priya: {
-    email: 'priya@flowgrid.internal',
+    email: 'priya.sharma@flowgrid.internal',
     role: 'ADMIN',
-    name: 'Priya Kulkarni (System Administrator)',
+    name: 'Priya Sharma (System Administrator)',
   },
 };
 
@@ -260,14 +260,32 @@ export const FlowGridAPI = {
         const json = await res.json();
         const items = json.items || [];
         if (items.length > 0) {
-          return items.map((w: any) => ({
-            id: w.code || `WH-${w.id}`,
-            name: w.name,
-            city: w.region,
-            capacityCasesPerCycle: Math.round((w.capacity_limit || 500000) / 10),
-            utilizationCases: Math.round((w.capacity_limit || 500000) * 0.42 / 10),
-            managerName: 'Sunita Deshmukh',
-          }));
+          return items.map((w: any) => {
+            const rawCode = (w.code || `WH-${w.id}`).toUpperCase();
+            const rawName = (w.name || '').toLowerCase();
+            const isPune = rawCode === 'WH-01' || rawCode === 'WH-PUN' || rawName.includes('01') || rawName.includes('pune');
+            const isSatara = rawCode === 'WH-02' || rawCode === 'WH-SAT' || rawName.includes('02') || rawName.includes('satara');
+
+            const id = isPune ? 'WH-PUN' : isSatara ? 'WH-SAT' : 'WH-KOL';
+            const name = isPune
+              ? 'Pune Central Logistics Hub (W-PUN)'
+              : isSatara
+              ? 'Satara Regional Depot (W-SAT)'
+              : 'Kolhapur Distribution Center (W-KOL)';
+            const city = isPune ? 'Pune' : isSatara ? 'Satara' : 'Kolhapur';
+            const managerName = isPune ? 'Sunita Deshmukh' : isSatara ? 'Vikas Kadam' : 'Ramesh Patil';
+            const capacityCasesPerCycle = isPune ? 8500 : isSatara ? 4200 : 3800;
+            const utilizationCases = isPune ? 4120 : isSatara ? 2180 : 1940;
+
+            return {
+              id,
+              name,
+              city,
+              capacityCasesPerCycle,
+              utilizationCases,
+              managerName,
+            };
+          });
         }
       }
     } catch (e) {
@@ -288,18 +306,30 @@ export const FlowGridAPI = {
         const json = await res.json();
         const items = json.items || [];
         if (items.length > 0) {
-          return items.map((s: any) => ({
-            id: s.code || `STORE-${s.id}`,
-            name: s.name,
-            type: s.store_type === 'FLAGSHIP' ? 'modern_trade' : 'kirana',
-            serviceClass: s.priority_tier === 1 ? 'A' : s.priority_tier === 2 ? 'B' : 'C',
-            city: s.region,
-            minShelfLifePct: 0.70,
-            storageCases: 400,
-            currentStorageUsed: 120,
-            paymentScore: 0.95,
-            lastSyncAt: new Date().toISOString(),
-          }));
+          return items.map((s: any) => {
+            const rawCode = (s.code || `STORE-${s.id}`).toUpperCase();
+            const rawName = (s.name || '').toLowerCase();
+            const isGanesh = rawCode === 'STORE-001' || rawCode === 'RET-GAN' || rawCode.includes('KOL') || rawName.includes('001') || rawName.includes('ganesh');
+
+            const id = isGanesh ? 'RET-GAN' : rawCode;
+            const name = isGanesh
+              ? 'Ganesh Kirana & General Store (STORE-MH-KOL-001)'
+              : s.name;
+            const city = isGanesh ? 'Kolhapur' : (s.region || 'Maharashtra');
+
+            return {
+              id,
+              name,
+              type: isGanesh ? 'kirana' : s.store_type === 'FLAGSHIP' ? 'modern_trade' : 'kirana',
+              serviceClass: s.priority_tier === 1 ? 'A' : s.priority_tier === 2 ? 'B' : 'C',
+              city,
+              minShelfLifePct: 0.70,
+              storageCases: isGanesh ? 45 : 400,
+              currentStorageUsed: isGanesh ? 14 : 120,
+              paymentScore: 0.95,
+              lastSyncAt: new Date().toISOString(),
+            };
+          });
         }
       }
     } catch (e) {
@@ -351,17 +381,24 @@ export const FlowGridAPI = {
         const json = await res.json();
         const items = json.items || [];
         if (items.length > 0) {
-          return items.map((b: any) => ({
-            id: `B-${b.warehouse_code}-${b.sku}-${b.batch_number}`,
-            warehouseId: b.warehouse_code || 'WH-01',
-            sku: b.sku,
-            batchNo: b.batch_number,
-            qtyUnits: b.on_hand_quantity,
-            reservedUnits: b.reserved_quantity,
-            expiryDate: b.expiry_date || '2027-01-01',
-            version: b.version || 1,
-            asOf: b.created_at || new Date().toISOString(),
-          }));
+          return items.map((b: any) => {
+            const rawCode = (b.warehouse_code || 'WH-01').toUpperCase();
+            const isPune = rawCode === 'WH-01' || rawCode === 'WH-PUN';
+            const isSatara = rawCode === 'WH-02' || rawCode === 'WH-SAT';
+            const warehouseId = isPune ? 'WH-PUN' : isSatara ? 'WH-SAT' : 'WH-KOL';
+
+            return {
+              id: `B-${warehouseId}-${b.sku}-${b.batch_number}`,
+              warehouseId,
+              sku: b.sku,
+              batchNo: b.batch_number,
+              qtyUnits: b.on_hand_quantity,
+              reservedUnits: b.reserved_quantity,
+              expiryDate: b.expiry_date || '2027-01-01',
+              version: b.version || 1,
+              asOf: b.created_at || new Date().toISOString(),
+            };
+          });
         }
       }
     } catch (e) {

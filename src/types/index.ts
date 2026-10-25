@@ -8,6 +8,65 @@ export type InTransitStatus = 'IN_TRANSIT' | 'RECEIVED' | 'PARTIAL' | 'REJECTED'
 export type RejectionReason = 'short_shelf_life' | 'damaged' | 'no_space' | 'wrong_sku';
 export type UserRole = 'rohit' | 'sunita' | 'ganesh' | 'priya';
 
+export interface PersonaProfile {
+  id: UserRole;
+  name: string;
+  title: string;
+  scope: string;
+  scopeId?: string; // e.g. 'W-PUN' or 'STORE-MH-KOL-001'
+  allowedActions: string[];
+  restrictions: string[];
+  badgeColor: string;
+}
+
+export interface GoodsReceiptNote {
+  grnId: string;
+  warehouseId: string;
+  receivedAt: string;
+  supplierOrPlant: string;
+  sku: string;
+  batchNo: string;
+  receivedQuantityUnits: number;
+  damagedQuantityUnits: number;
+  expiryDate: string;
+  inspectorName: string;
+  status: 'VERIFIED' | 'QUARANTINED' | 'REJECTED';
+  remarks?: string;
+}
+
+export interface KiranaReturn {
+  id: string;
+  storeId: string;
+  sku: string;
+  unitsReturned: number;
+  reason: 'damaged' | 'expired' | 'customer_return' | 'wrong_delivery';
+  occurredAt: string;
+  status: 'LOGGED' | 'SYNCED';
+}
+
+export interface ReplenishmentRequest {
+  id: string;
+  storeId: string;
+  sku: string;
+  requestedCases: number;
+  priority: 'HIGH' | 'NORMAL' | 'URGENT_STOCKOUT';
+  notes?: string;
+  requestedAt: string;
+  status: 'SUBMITTED' | 'APPROVED' | 'ALLOCATED';
+  idempotencyKey: string;
+}
+
+export type AssignmentMode = 'MANUAL' | 'AUTO_SUGGEST_PROFILE';
+
+export interface AssignmentSettings {
+  mode: AssignmentMode;
+  matchNativeDistrict: boolean;
+  enforceLaneWidthClearance: boolean;
+  requireGhatCertificationForHillyRoutes: boolean;
+  prioritizeBackhaulLoads: boolean;
+  maxPayloadUtilizationThreshold: number; // e.g. 90%
+}
+
 export interface Product {
   sku: string;
   name: string;

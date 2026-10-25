@@ -22,10 +22,9 @@ import {
   ShieldCheck,
   UserCheck,
   Truck,
-  Sun,
-  Moon
+  RotateCcw
 } from 'lucide-react';
-import { UserRole, ThemeMode } from '../types';
+import { UserRole } from '../types';
 
 export type ActiveTab = 'plans' | 'forecast' | 'map' | 'benchmark' | 'warehouse' | 'retailer' | 'dispatch' | 'import' | 'health';
 
@@ -40,8 +39,6 @@ interface NavbarProps {
   onOpenDemoModal: () => void;
   onOpenWhatIfModal: () => void;
   onTriggerSync: () => void;
-  theme?: ThemeMode;
-  onToggleTheme?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -55,45 +52,127 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDemoModal,
   onOpenWhatIfModal,
   onTriggerSync,
-  theme = 'night',
-  onToggleTheme,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
 
-  const roleNames: Record<UserRole, { name: string; title: string; badgeColor: string }> = {
-    rohit: { name: 'Rohit Deshpande', title: 'Distribution Planner', badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
-    sunita: { name: 'Sunita Deshmukh', title: 'Warehouse Manager (Pune Hub)', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-    ganesh: { name: 'Ganesh Patil', title: 'Kirana Store Owner (Kolhapur)', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-    priya: { name: 'Priya Sharma', title: 'System Administrator', badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  const roleNames: Record<UserRole, { name: string; title: string; scope: string; badgeColor: string }> = {
+    rohit: {
+      name: 'Rohit Deshpande',
+      title: 'Distribution Planner',
+      scope: 'Statewide Planning',
+      badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+    },
+    sunita: {
+      name: 'Sunita Deshmukh',
+      title: 'Warehouse Manager',
+      scope: 'Pune Hub (W-PUN)',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+    },
+    ganesh: {
+      name: 'Ganesh Patil',
+      title: 'Kirana Store Owner',
+      scope: 'Kolhapur (STORE-MH-KOL-001)',
+      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    },
+    priya: {
+      name: 'Priya Sharma',
+      title: 'System Administrator',
+      scope: 'Systemwide Administration',
+      badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+    },
   };
 
-  const navCategories = [
-    {
-      label: 'PLANNING & FORECAST',
-      items: [
-        { id: 'plans' as ActiveTab, label: 'Allocation Plan', icon: Cpu, badge: 'ALLOC' },
-        { id: 'forecast' as ActiveTab, label: 'Demand Forecast', icon: TrendingUp, badge: 'Quantile' },
-        { id: 'map' as ActiveTab, label: 'Demand Map', icon: MapPin, badge: 'Geo' },
-        { id: 'benchmark' as ActiveTab, label: 'Impact Benchmark', icon: BarChart3, badge: '-40%' },
-      ],
-    },
-    {
-      label: 'FIELD & OPERATIONS',
-      items: [
-        { id: 'dispatch' as ActiveTab, label: 'Smart Delivery Agent', icon: Truck, badge: 'Native AI' },
-        { id: 'warehouse' as ActiveTab, label: 'Warehouse Ops', icon: WarehouseIcon, badge: 'FEFO' },
-        { id: 'retailer' as ActiveTab, label: 'Kirana Field POS', icon: Store, badge: 'Offline' },
-      ],
-    },
-    {
-      label: 'DATA & OBSERVABILITY',
-      items: [
-        { id: 'import' as ActiveTab, label: 'Data Import Studio', icon: UploadCloud, badge: '5% Rule' },
-        { id: 'health' as ActiveTab, label: 'System Health & Alerts', icon: Activity, badge: 'API' },
-      ],
-    },
-  ];
+  const roleIcons: Record<UserRole, React.ComponentType<{ className?: string }>> = {
+    rohit: Sliders,
+    sunita: WarehouseIcon,
+    ganesh: Store,
+    priya: ShieldCheck,
+  };
+  const ActiveRoleIcon = roleIcons[userRole];
+
+  const getNavCategoriesForRole = (role: UserRole) => {
+    switch (role) {
+      case 'ganesh':
+        return [
+          {
+            label: 'MY KIRANA STORE (KOLHAPUR)',
+            items: [
+              { id: 'retailer' as ActiveTab, label: 'Kirana Field POS', icon: Store, badge: 'Counter POS' },
+              { id: 'plans' as ActiveTab, label: 'Inbound Store Orders', icon: Boxes, badge: 'Inbound' },
+              { id: 'forecast' as ActiveTab, label: 'Store Demand AI', icon: TrendingUp, badge: 'Local ML' },
+              { id: 'dispatch' as ActiveTab, label: 'Incoming Delivery Tracker', icon: Truck, badge: 'Kolhapur' },
+            ],
+          },
+        ];
+      case 'sunita':
+        return [
+          {
+            label: 'PUNE HUB OPERATIONS (W-PUN)',
+            items: [
+              { id: 'warehouse' as ActiveTab, label: 'Warehouse Dock & FEFO', icon: WarehouseIcon, badge: 'W-PUN Dock' },
+              { id: 'dispatch' as ActiveTab, label: 'Pune Fleet Dispatch', icon: Truck, badge: 'Native AI' },
+              { id: 'plans' as ActiveTab, label: 'Pune Outbound Plan', icon: Cpu, badge: 'Outbound' },
+              { id: 'forecast' as ActiveTab, label: 'Downstream Demand Intake', icon: TrendingUp, badge: 'Pune Hub' },
+            ],
+          },
+        ];
+      case 'priya':
+        return [
+          {
+            label: 'GOVERNANCE & SYSTEM INTEGRITY',
+            items: [
+              { id: 'health' as ActiveTab, label: 'System Health & Alerts', icon: Activity, badge: 'API Mon' },
+              { id: 'import' as ActiveTab, label: 'Data Import Studio', icon: UploadCloud, badge: '5% Rule' },
+              { id: 'plans' as ActiveTab, label: 'Allocation Audit Matrix', icon: Cpu, badge: 'Audit' },
+            ],
+          },
+          {
+            label: 'OBSERVABILITY & NETWORK',
+            items: [
+              { id: 'benchmark' as ActiveTab, label: 'Impact Benchmark', icon: BarChart3, badge: 'Baseline' },
+              { id: 'dispatch' as ActiveTab, label: 'Fleet Dispatch Audit', icon: Truck, badge: 'Telemetry' },
+              { id: 'map' as ActiveTab, label: 'Logistics Grid Map', icon: MapPin, badge: 'GIS' },
+            ],
+          },
+        ];
+      case 'rohit':
+      default:
+        return [
+          {
+            label: 'STATEWIDE PLANNING & OPTIMIZATION',
+            items: [
+              { id: 'plans' as ActiveTab, label: 'Allocation Plan', icon: Cpu, badge: 'OR-Tools' },
+              { id: 'forecast' as ActiveTab, label: 'Demand Forecast', icon: TrendingUp, badge: 'Quantile' },
+              { id: 'map' as ActiveTab, label: 'Demand Map', icon: MapPin, badge: 'Geo' },
+              { id: 'benchmark' as ActiveTab, label: 'Impact Benchmark', icon: BarChart3, badge: 'Sim Result' },
+            ],
+          },
+          {
+            label: 'SUPPLY CHAIN EXECUTION',
+            items: [
+              { id: 'dispatch' as ActiveTab, label: 'Smart Delivery Agent', icon: Truck, badge: 'Native AI' },
+              { id: 'warehouse' as ActiveTab, label: 'Warehouse Stock Audit', icon: WarehouseIcon, badge: 'Audit FEFO' },
+            ],
+          },
+        ];
+    }
+  };
+
+  const navCategories = getNavCategoriesForRole(userRole);
+  const allowedTabIds = React.useMemo(() => {
+    return navCategories.flatMap(cat => cat.items.map(item => item.id));
+  }, [userRole]);
+
+  // Auto-switch to authorized tab if current tab becomes unauthorized
+  React.useEffect(() => {
+    if (!allowedTabIds.includes(activeTab)) {
+      if (userRole === 'rohit') setActiveTab('plans');
+      else if (userRole === 'sunita') setActiveTab('warehouse');
+      else if (userRole === 'ganesh') setActiveTab('retailer');
+      else if (userRole === 'priya') setActiveTab('health');
+    }
+  }, [userRole, activeTab, allowedTabIds, setActiveTab]);
 
   const handleTabClick = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -113,7 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+              <span className="font-extrabold text-xl tracking-tight text-[#0a192f]">
                 HETVAYA
               </span>
               <span className="text-[10px] uppercase tracking-widest font-bold px-1.5 py-0.5 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded">
@@ -138,22 +217,22 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="relative">
           <div
             onClick={() => setPersonaDropdownOpen(!personaDropdownOpen)}
-            className="flex items-center justify-between bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-2.5 cursor-pointer transition-all shadow-sm"
+            className="flex items-center justify-between bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-2.5 cursor-pointer transition-all shadow-sm group"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-md">
-                {userRole[0].toUpperCase()}
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                <ActiveRoleIcon className="w-4 h-4 text-white" />
               </div>
               <div className="truncate text-left">
-                <p className="text-xs font-semibold text-slate-200 truncate leading-tight">
-                  {roleNames[userRole].name}
+                <p className="text-xs font-semibold text-slate-200 truncate leading-tight flex items-center gap-1.5">
+                  <span>{roleNames[userRole].name}</span>
                 </p>
-                <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                  {roleNames[userRole].title}
+                <p className="text-[10px] text-indigo-400 font-medium truncate mt-0.5">
+                  {roleNames[userRole].scope}
                 </p>
               </div>
             </div>
-            <span className="text-[10px] text-indigo-400 font-semibold shrink-0 ml-1">
+            <span className="text-[10px] text-slate-400 group-hover:text-white font-semibold shrink-0 ml-1 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
               Switch
             </span>
           </div>
@@ -162,26 +241,46 @@ export const Navbar: React.FC<NavbarProps> = ({
           {personaDropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 py-1">
-                Switch User Persona
+                Select Persona Scope
               </p>
-              {(Object.keys(roleNames) as UserRole[]).map(r => (
-                <button
-                  key={r}
-                  onClick={() => {
-                    setUserRole(r);
-                    setPersonaDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                    userRole === r ? 'bg-indigo-600/20 text-indigo-300 font-bold' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="truncate">
-                    <p className="font-medium text-slate-200 truncate">{roleNames[r].name}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{roleNames[r].title}</p>
-                  </div>
-                  {userRole === r && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0 ml-2" />}
-                </button>
-              ))}
+              {(Object.keys(roleNames) as UserRole[]).map(r => {
+                const RoleIcon = roleIcons[r];
+                return (
+                  <button
+                    key={r}
+                    onClick={() => {
+                      setUserRole(r);
+                      setPersonaDropdownOpen(false);
+                      if (r === 'rohit') {
+                        setActiveTab('plans');
+                      } else if (r === 'sunita') {
+                        setActiveTab('warehouse');
+                      } else if (r === 'ganesh') {
+                        setActiveTab('retailer');
+                      } else if (r === 'priya') {
+                        setActiveTab('health');
+                      }
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                      userRole === r ? 'bg-indigo-600/20 text-indigo-300 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <div className="w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center shrink-0">
+                        <RoleIcon className="w-3.5 h-3.5 text-indigo-400" />
+                      </div>
+                      <div className="truncate">
+                        <p className="font-medium text-slate-200 truncate">{roleNames[r].name}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{roleNames[r].title}</p>
+                        <span className="text-[9px] px-1 py-0.2 bg-slate-800 text-indigo-300 rounded font-mono">
+                          {roleNames[r].scope}
+                        </span>
+                      </div>
+                    </div>
+                    {userRole === r && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0 ml-2" />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -271,50 +370,77 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
       </div>
 
-      {/* Bottom Utility & Demo Buttons */}
+      {/* Bottom Utility & Persona-Specific Action Buttons */}
       <div className="space-y-2 pt-4 border-t border-slate-800/80">
-        {onToggleTheme && (
+        {/* Persona Quick Action 1 */}
+        {userRole === 'ganesh' ? (
           <button
             type="button"
-            onClick={onToggleTheme}
-            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer select-none ${
-              theme === 'day'
-                ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
-                : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700'
-            }`}
+            onClick={onTriggerSync}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 transition-all shadow-sm cursor-pointer"
+            title="Sync offline counter sales and inventory counts"
           >
-            {theme === 'day' ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                <span>Theme: Day (Cream Navy)</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
-                <span>Theme: Night (Cosmic)</span>
-              </>
-            )}
+            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+            <span>Sync Store POS ({queuedEventCount})</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenDemoModal}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>3-Min Demo Script</span>
           </button>
         )}
 
-        <button
-          onClick={onOpenDemoModal}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm cursor-pointer"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>3-Min Demo Script</span>
-        </button>
+        {/* Persona Quick Action 2 */}
+        {userRole === 'ganesh' ? (
+          <button
+            type="button"
+            onClick={() => handleTabClick('dispatch')}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm cursor-pointer"
+          >
+            <Truck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Kolhapur Delivery ETA</span>
+          </button>
+        ) : userRole === 'sunita' ? (
+          <button
+            type="button"
+            onClick={() => handleTabClick('warehouse')}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm cursor-pointer"
+          >
+            <WarehouseIcon className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Pune Dock &amp; GRN Entry</span>
+          </button>
+        ) : userRole === 'priya' ? (
+          <button
+            type="button"
+            onClick={() => handleTabClick('import')}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition-all shadow-sm cursor-pointer"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+            <span>5% Discrepancy Rule Studio</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenWhatIfModal}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm cursor-pointer"
+          >
+            <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+            <span>What-If Simulator</span>
+          </button>
+        )}
 
-        <button
-          onClick={onOpenWhatIfModal}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-sm cursor-pointer"
-        >
-          <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-          <span>What-If Simulator</span>
-        </button>
-
-        <p className="text-[10px] text-center text-slate-600 pt-1">
-          Marginal-Value Engine • scikit-learn 1.9
+        <p className="text-[10px] text-center text-slate-500 pt-1">
+          {userRole === 'ganesh'
+            ? 'STORE-MH-KOL-001 • Offline SQLite Engine'
+            : userRole === 'sunita'
+            ? 'Pune Central Hub (W-PUN) • FEFO Enforced'
+            : userRole === 'priya'
+            ? 'System Admin Audit • Zero Data Loss'
+            : 'Marginal-Value Engine • scikit-learn 1.9'}
         </p>
       </div>
     </div>
@@ -361,9 +487,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Persona Avatar */}
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
-            {userRole[0].toUpperCase()}
+          {/* Persona Avatar with dynamic RoleIcon */}
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-md">
+            <ActiveRoleIcon className="w-3.5 h-3.5 text-white" />
           </div>
 
           {/* Hamburger toggle */}

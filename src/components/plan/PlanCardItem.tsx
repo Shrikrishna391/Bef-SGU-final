@@ -12,7 +12,7 @@ import {
   Boxes,
   ShieldAlert
 } from 'lucide-react';
-import { AllocationLine, Product, Warehouse, Retailer } from '../../types';
+import { AllocationLine, Product, Warehouse, Retailer, UserRole } from '../../types';
 import { ShelfLifeIndicator } from './ShelfLifeIndicator';
 
 interface PlanCardItemProps {
@@ -24,6 +24,7 @@ interface PlanCardItemProps {
   onEdit: (line: AllocationLine) => void;
   onApprove: (lineId: string) => void;
   isApproving?: boolean;
+  userRole?: UserRole;
 }
 
 export const PlanCardItem: React.FC<PlanCardItemProps> = ({
@@ -35,6 +36,7 @@ export const PlanCardItem: React.FC<PlanCardItemProps> = ({
   onEdit,
   onApprove,
   isApproving = false,
+  userRole = 'rohit',
 }) => {
   const [copiedSku, setCopiedSku] = useState(false);
 
@@ -190,26 +192,39 @@ export const PlanCardItem: React.FC<PlanCardItemProps> = ({
           <span>Explain</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onEdit(line)}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors"
-          title="Override quantity with mandatory justification"
-        >
-          <Edit3 className="w-3.5 h-3.5" />
-        </button>
+        {userRole === 'ganesh' ? (
+          <span className="text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+            <Truck className="w-3.5 h-3.5 text-amber-400" />
+            <span>Inbound to Store</span>
+          </span>
+        ) : userRole === 'sunita' && line.warehouseId !== 'WH-PUN' && line.warehouseId !== 'WH-01' ? (
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700">
+            Non-Pune Hub
+          </span>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => onEdit(line)}
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+              title="Override quantity with mandatory justification"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+            </button>
 
-        {line.status !== 'APPROVED' && line.status !== 'STALE' && (
-          <button
-            type="button"
-            onClick={() => onApprove(line.id)}
-            disabled={isApproving}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
-            title="Approve line and reserve stock atomically"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Approve</span>
-          </button>
+            {line.status !== 'APPROVED' && line.status !== 'STALE' && (
+              <button
+                type="button"
+                onClick={() => onApprove(line.id)}
+                disabled={isApproving}
+                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer"
+                title="Approve line and reserve stock atomically"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Approve</span>
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -14,7 +14,7 @@ import { SmartDispatchView } from './components/SmartDispatchView';
 import { MapSection } from './components/map-section/MapSection';
 import { DemoWalkthroughModal } from './components/DemoWalkthroughModal';
 import { WhatIfSimulatorModal } from './components/WhatIfSimulatorModal';
-import { Sun, Moon } from 'lucide-react';
+import { UserCheck, ShieldCheck, Sparkles, CheckCircle2, ChevronRight, Lock, Store, Warehouse as WarehouseIcon, Cpu, Sliders } from 'lucide-react';
 
 import {
   INITIAL_PRODUCTS,
@@ -54,11 +54,29 @@ import { PLAN_HORIZON_DAYS, SYNTHETIC_SALES_PANEL } from './data/demoScope';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('plans');
   const [userRole, setUserRole] = useState<UserRole>('rohit');
+  const [roleNotice, setRoleNotice] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [backendStatus, setBackendStatus] = useState<BackendHealthStatus | null>(null);
-  const [theme, setTheme] = useState<ThemeMode>('day');
+  const theme: ThemeMode = 'day';
 
-  const handleToggleTheme = () => setTheme(prev => prev === 'night' ? 'day' : 'night');
+  const handleRoleChange = (newRole: UserRole) => {
+    setUserRole(newRole);
+    setActiveUserRole(newRole);
+    if (newRole === 'rohit') {
+      setActiveTab('plans');
+      setRoleNotice('✓ Switched to Rohit Deshpande (Distribution Planner) • Scope: Statewide Allocation Matrix');
+    } else if (newRole === 'sunita') {
+      setActiveTab('warehouse');
+      setRoleNotice('✓ Switched to Sunita Deshmukh (Warehouse Manager) • Scope: Pune Hub (W-PUN) Batches & Dock');
+    } else if (newRole === 'ganesh') {
+      setActiveTab('retailer');
+      setRoleNotice('✓ Switched to Ganesh Patil (Kirana Store Owner) • Scope: Kolhapur Store (STORE-MH-KOL-001)');
+    } else if (newRole === 'priya') {
+      setActiveTab('health');
+      setRoleNotice('✓ Switched to Priya Sharma (System Administrator) • Scope: Systemwide Governance & Audit');
+    }
+    setTimeout(() => setRoleNotice(null), 4500);
+  };
 
   // Sync active user persona with API client
   useEffect(() => {
@@ -196,11 +214,20 @@ export const App: React.FC = () => {
           const match = rec.product.match(/(SKU-\d+)/);
           const sku = match ? match[1] : `SKU-${String(idx + 1).padStart(3, '0')}`;
 
+          const rawWh = (rec.from_warehouse || '').toUpperCase();
+          const isPune = rawWh === 'WH-01' || rawWh === 'WH-PUN' || rawWh.includes('PUNE');
+          const isSatara = rawWh === 'WH-02' || rawWh === 'WH-SAT' || rawWh.includes('SATARA');
+          const warehouseId = isPune ? 'WH-PUN' : isSatara ? 'WH-SAT' : 'WH-KOL';
+
+          const rawStore = (rec.to_store || '').toUpperCase();
+          const isGanesh = rawStore === 'STORE-001' || rawStore === 'RET-GAN' || rawStore.includes('GAN') || rawStore.includes('KOL');
+          const retailerId = isGanesh ? 'RET-GAN' : rawStore;
+
           const reasonCard: ReasonCard = {
             summary: rec.reason,
             skuName: rec.product,
-            retailerName: rec.to_store,
-            sourceWarehouseName: rec.from_warehouse,
+            retailerName: isGanesh ? 'Ganesh Kirana & General Store (Kolhapur)' : rec.to_store,
+            sourceWarehouseName: isPune ? 'Pune Central Logistics Hub (W-PUN)' : isSatara ? 'Satara Regional Depot' : 'Kolhapur Distribution Center',
             demandMedian: rec.quantity,
             demandP95: Math.round(rec.quantity * 1.35),
             effectiveStockBefore: 8,
@@ -219,10 +246,10 @@ export const App: React.FC = () => {
           return {
             id: `LINE-${String(idx + 1).padStart(3, '0')}`,
             planRunId: result.plan_code || `PLAN-AI-${Date.now().toString().slice(-6)}`,
-            warehouseId: rec.from_warehouse,
-            retailerId: rec.to_store,
+            warehouseId,
+            retailerId,
             sku,
-            batchNo: `LOT-${rec.from_warehouse}-${idx + 1}`,
+            batchNo: `LOT-${warehouseId}-${idx + 1}`,
             cases,
             units: rec.quantity,
             freightRupees: freight,
@@ -505,75 +532,133 @@ export const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col lg:flex-row transition-colors duration-200 ${
-      theme === 'day' ? 'theme-day bg-[#f8f6f0] text-[#0a192f]' : 'theme-night bg-slate-950 text-slate-100'
+      theme === 'day' ? 'theme-day bg-[#fbf4e5] text-[#0a192f]' : 'theme-night bg-slate-950 text-slate-100'
     }`}>
       {/* Left Sidebar Navigation */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         userRole={userRole}
-        setUserRole={setUserRole}
+        setUserRole={handleRoleChange}
         isOnline={isOnline}
         setIsOnline={setIsOnline}
         queuedEventCount={queuedEvents.filter(e => e.status === 'QUEUED').length}
         onOpenDemoModal={() => setIsDemoModalOpen(true)}
         onOpenWhatIfModal={() => setIsWhatIfModalOpen(true)}
         onTriggerSync={handleTriggerSync}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Content Column */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen overflow-x-hidden">
-        {/* Top Context Sub-Bar (Desktop) */}
-        <div className={`hidden lg:flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-6 py-2.5 border-b text-xs transition-colors duration-200 ${
+        {/* Role Switch Floating Toast */}
+        {roleNotice && (
+          <div className="fixed top-5 right-5 z-50 animate-in fade-in slide-in-from-top-3 duration-200 p-4 rounded-2xl bg-white text-[#0a192f] border border-indigo-200 shadow-xl flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-indigo-500 shrink-0 animate-pulse" />
+            <span className="text-xs font-semibold">{roleNotice}</span>
+          </div>
+        )}
+
+        {/* Top Context Sub-Bar (Desktop) with Persona Scope Ribbon */}
+        <div className={`hidden lg:flex flex-col border-b text-xs transition-colors duration-200 ${
           theme === 'day'
             ? 'bg-white/95 border-slate-200/90 text-slate-700 shadow-sm'
-            : 'bg-slate-900/40 border-slate-800/80 text-slate-400'
+            : 'bg-slate-900/60 border-slate-800/80 text-slate-300'
         }`}>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className={`font-semibold capitalize ${theme === 'day' ? 'text-[#0a192f]' : 'text-slate-200'}`}>
-              {activeTab === 'plans' ? 'Allocation Plan & AI Engine' :
-               activeTab === 'forecast' ? 'Demand Forecasting Intelligence' :
-               activeTab === 'map' ? 'Demand Map Intelligence' :
-               activeTab === 'benchmark' ? 'Baseline Impact Benchmark' :
-               activeTab === 'dispatch' ? 'Smart Delivery Agent & Native Driver Dispatch' :
-               activeTab === 'warehouse' ? 'Warehouse Picking & Operations' :
-               activeTab === 'retailer' ? 'Kirana Field POS & Capture' :
-               activeTab === 'import' ? 'Master Data Import Studio' :
-               'System Health & Monitoring'}
-            </span>
-            <span className="text-slate-400">•</span>
-            <span className="text-slate-500">{PLAN_HORIZON_DAYS}-day planning horizon</span>
-            <span className="text-slate-400">•</span>
-            <span className="text-indigo-600 dark:text-indigo-300 font-mono text-[11px]">Maharashtra Logistics Grid</span>
+          {/* Top Info Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-6 py-2 border-b border-slate-100 dark:border-slate-800/60">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className={`font-bold capitalize ${theme === 'day' ? 'text-[#0a192f]' : 'text-white'}`}>
+                {activeTab === 'plans' ? 'Allocation Plan & AI Engine' :
+                 activeTab === 'forecast' ? 'Demand Forecasting Intelligence' :
+                 activeTab === 'map' ? 'Demand Map Intelligence' :
+                 activeTab === 'benchmark' ? 'Baseline Impact Benchmark' :
+                 activeTab === 'dispatch' ? 'Smart Delivery Agent & Native Driver Dispatch' :
+                 activeTab === 'warehouse' ? 'Warehouse Picking & Operations' :
+                 activeTab === 'retailer' ? 'Kirana Field POS & Capture' :
+                 activeTab === 'import' ? 'Master Data Import Studio' :
+                 'System Health & Monitoring'}
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-500">{PLAN_HORIZON_DAYS}-day planning horizon</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-indigo-600 dark:text-indigo-300 font-mono text-[11px]">Maharashtra Logistics Grid</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-[11px]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-bold text-amber-900">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Day Mode
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-[11px]">
-            {/* Quick Theme Toggle Button */}
-            <button
-              type="button"
-              onClick={handleToggleTheme}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs transition-all cursor-pointer shadow-sm ${
-                theme === 'day'
-                  ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
-                  : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700'
-              }`}
-            >
-              {theme === 'day' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                  <span>Day Mode (Cream Navy)</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
-                  <span>Night Mode (Cosmic)</span>
-                </>
-              )}
-            </button>
-            <span className="text-slate-400">|</span>
-            <span className="text-slate-500">Solve Time: <strong className="text-indigo-600 dark:text-indigo-300">&lt;1ms</strong></span>
+          {/* Persona Scope Ribbon */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2 bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Active User &amp; Scope:
+              </span>
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl border font-bold text-xs ${
+                userRole === 'rohit'
+                  ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
+                  : userRole === 'sunita'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  : userRole === 'ganesh'
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                  : 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
+              }`}>
+                {userRole === 'rohit' ? <Cpu className="w-3.5 h-3.5 text-indigo-500" /> :
+                 userRole === 'sunita' ? <WarehouseIcon className="w-3.5 h-3.5 text-emerald-500" /> :
+                 userRole === 'ganesh' ? <Store className="w-3.5 h-3.5 text-amber-500" /> :
+                 <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />}
+                <span>
+                  {userRole === 'rohit' ? 'Rohit Deshpande (Distribution Planner)' :
+                   userRole === 'sunita' ? 'Sunita Deshmukh (Warehouse Manager)' :
+                   userRole === 'ganesh' ? 'Ganesh Patil (Kirana Store Owner)' :
+                   'Priya Sharma (System Administrator)'}
+                </span>
+                <span className="opacity-60">•</span>
+                <span className="font-mono text-[11px]">
+                  {userRole === 'rohit' ? 'Statewide Planning Scope' :
+                   userRole === 'sunita' ? 'Pune Hub (W-PUN) Scope' :
+                   userRole === 'ganesh' ? 'Kolhapur Store (STORE-MH-KOL-001) Scope' :
+                   'Systemwide Administration Scope'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Switch Persona Buttons with Dynamic Icons */}
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span className="text-slate-400 mr-1 font-medium">Switch Persona:</span>
+              {([
+                { id: 'rohit' as UserRole, label: 'Rohit (Planner)', Icon: Cpu },
+                { id: 'sunita' as UserRole, label: 'Sunita (Pune Hub)', Icon: WarehouseIcon },
+                { id: 'ganesh' as UserRole, label: 'Ganesh (Kirana)', Icon: Store },
+                { id: 'priya' as UserRole, label: 'Priya (Admin)', Icon: ShieldCheck },
+              ]).map(({ id: r, label, Icon }) => {
+                const isSelected = userRole === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => handleRoleChange(r)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? theme === 'day'
+                          ? 'btn-navy text-white shadow-sm ring-2 ring-indigo-400/50'
+                          : 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/50'
+                        : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {isSelected ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Icon className="w-3.5 h-3.5 opacity-70" />
+                    )}
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -593,13 +678,15 @@ export const App: React.FC = () => {
               warehouses={warehouses}
               retailers={retailers}
               isGenerating={isGenerating}
+              userRole={userRole}
+              theme={theme}
             />
           )}
 
           {activeTab === 'dispatch' && (
             <SmartDispatchView
               theme={theme}
-              onToggleTheme={handleToggleTheme}
+              userRole={userRole}
             />
           )}
 
@@ -608,6 +695,8 @@ export const App: React.FC = () => {
               forecasts={forecasts}
               products={products}
               retailers={retailers}
+              userRole={userRole}
+              theme={theme}
             />
           )}
 
@@ -627,6 +716,8 @@ export const App: React.FC = () => {
               onDispatchLine={handleDispatchLine}
               onUpdateBatchCount={handleUpdateBatchCount}
               isOnline={isOnline}
+              userRole={userRole}
+              theme={theme}
             />
           )}
 
@@ -641,6 +732,8 @@ export const App: React.FC = () => {
               queuedEvents={queuedEvents}
               isOnline={isOnline}
               onTriggerSync={handleTriggerSync}
+              userRole={userRole}
+              theme={theme}
             />
           )}
 
@@ -649,7 +742,12 @@ export const App: React.FC = () => {
           )}
 
           {activeTab === 'health' && (
-            <AdminHealthView />
+            <AdminHealthView
+              queuedEventCount={queuedEvents.filter(e => e.status === 'QUEUED').length}
+              userRole={userRole}
+              isOnline={isOnline}
+              theme={theme}
+            />
           )}
         </main>
 

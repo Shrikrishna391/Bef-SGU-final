@@ -21,10 +21,18 @@ import {
   Sparkles,
   Layers,
   ChevronDown,
-  Info
+  Info,
+  Sliders,
+  ShieldCheck,
+  Lock,
+  Gauge,
+  Compass,
+  PackageCheck,
+  FileText,
+  Warehouse as WarehouseIcon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { PlanRun, AllocationLine, Product, Warehouse, Retailer } from '../types';
+import { PlanRun, AllocationLine, Product, Warehouse, Retailer, UserRole, ThemeMode } from '../types';
 import { ReasonCardModal } from './ReasonCardModal';
 import { ShelfLifeIndicator, normalizeShelfLifePct } from './plan/ShelfLifeIndicator';
 import { PlanKpiCards } from './plan/PlanKpiCards';
@@ -44,6 +52,8 @@ interface PlanGeneratorViewProps {
   warehouses: Warehouse[];
   retailers: Retailer[];
   isGenerating: boolean;
+  userRole?: UserRole;
+  theme?: ThemeMode;
 }
 
 export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
@@ -58,7 +68,17 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
   warehouses,
   retailers,
   isGenerating,
+  userRole = 'rohit',
+  theme = 'night',
 }) => {
+  // Planner Objective & Input Controls (Rohit Deshpande Scope)
+  const [planningObjective, setPlanningObjective] = useState<'SERVICE_MARGIN' | 'MIN_FREIGHT' | 'RAPID_FEFO'>('SERVICE_MARGIN');
+  const [serviceTargetPct, setServiceTargetPct] = useState<number>(95);
+  const [planningHorizonDays, setPlanningHorizonDays] = useState<number>(14);
+  const [routeRiskTolerance, setRouteRiskTolerance] = useState<number>(0.65);
+  const [vehicleSelection, setVehicleSelection] = useState<string>('MIXED_FLEET');
+  const [isPlannerControlsOpen, setIsPlannerControlsOpen] = useState<boolean>(false);
+
   // Modals & Popovers
   const [selectedReasonLine, setSelectedReasonLine] = useState<AllocationLine | null>(null);
   const [overrideModalLine, setOverrideModalLine] = useState<AllocationLine | null>(null);
@@ -84,6 +104,18 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isBriefingExpanded, setIsBriefingExpanded] = useState<boolean>(true);
+
+  // Auto-sync toolbar filters when persona/user switches
+  React.useEffect(() => {
+    if (userRole === 'sunita') {
+      setFilters(prev => ({ ...prev, warehouseId: 'WH-PUN', retailerId: 'all' }));
+    } else if (userRole === 'ganesh') {
+      setFilters(prev => ({ ...prev, retailerId: 'RET-GAN', warehouseId: 'all' }));
+    } else {
+      setFilters(prev => ({ ...prev, warehouseId: 'all', retailerId: 'all' }));
+    }
+    setCurrentPage(1);
+  }, [userRole]);
 
   // Helper to show transient toast message
 
@@ -182,10 +214,47 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
     triggerFeedback(`All ${planRun?.lines.length || 0} allocation lines approved and locked for dispatch.`);
   };
 
-  // Multi-tier filtering & sorting
-  const filteredAndSortedLines = useMemo(() => {
+  // PERSONA DATA SCOPING: Filter raw plan lines by persona authority
+  const personaScopedLines = useMemo(() => {
     if (!planRun) return [];
     let list = [...planRun.lines];
+    if (userRole === 'sunita') {
+      // Sunita Deshmukh: Pune Hub (W-PUN / WH-PUN / WH-01) outbound lines
+      list = list.filter(l =>
+        l.warehouseId === 'WH-PUN' ||
+        l.warehouseId === 'WH-01' ||
+        l.warehouseId.toLowerCase().includes('pun') ||
+        (l.explanation?.sourceWarehouseName && l.explanation.sourceWarehouseName.toLowerCase().includes('pune'))
+      );
+    } else if (userRole === 'ganesh') {
+      // Ganesh Patil: Kolhapur store (STORE-MH-KOL-001 / RET-GAN / STORE-001) inbound lines
+      list = list.filter(l =>
+        l.retailerId === 'RET-GAN' ||
+        l.retailerId === 'STORE-001' ||
+        l.retailerId.toLowerCase().includes('kol') ||
+        l.retailerId.toLowerCase().includes('gan') ||
+        (l.explanation?.retailerName && l.explanation.retailerName.toLowerCase().includes('ganesh'))
+      );
+    }
+    return list;
+  }, [planRun, userRole]);
+
+  // Dynamically scoped PlanRun for KPI Cards
+  const scopedPlanRun = useMemo(() => {
+    if (!planRun) return null;
+    const totalCases = personaScopedLines.reduce((sum, l) => sum + (l.cases || 0), 0);
+    const totalFreightRupees = personaScopedLines.reduce((sum, l) => sum + (l.freightRupees || 0), 0);
+    return {
+      ...planRun,
+      lines: personaScopedLines,
+      totalCases,
+      totalFreightRupees,
+    };
+  }, [planRun, personaScopedLines]);
+
+  // Multi-tier filtering & sorting
+  const filteredAndSortedLines = useMemo(() => {
+    let list = [...personaScopedLines];
 
     // Search query
     const q = filters.searchQuery.trim().toLowerCase();
@@ -273,7 +342,7 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
     }
 
     return list;
-  }, [planRun, filters, products, warehouses, retailers]);
+  }, [personaScopedLines, filters, products, warehouses, retailers]);
 
   // Pagination slicing
   const totalFilteredCount = filteredAndSortedLines.length;
@@ -283,10 +352,115 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
     return filteredAndSortedLines.slice(start, start + filters.pageSize);
   }, [filteredAndSortedLines, currentPage, filters.pageSize]);
 
-  const staleLines = planRun?.lines.filter(l => l.status === 'STALE') || [];
+  const staleLines = personaScopedLines.filter(l => l.status === 'STALE');
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Persona Scope Guardrail Banner */}
+      {userRole === 'sunita' && (
+        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
+              S
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-emerald-300 text-sm">
+                  Sunita Deshmukh — Warehouse Manager (Pune Hub W-PUN)
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
+                  PUNE DOCK SCOPE
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs mt-0.5">
+                Showing {personaScopedLines.length} outbound allocation lines originating from Pune Central Logistics Hub. Non-Pune lines are hidden per role scope.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
+            Dock Picking &amp; Dispatches Active
+          </span>
+        </div>
+      )}
+
+      {userRole === 'ganesh' && (
+        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-sm">
+              G
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-amber-300 text-sm">
+                  Ganesh Patil — Kirana Store Owner (Kolhapur STORE-MH-KOL-001)
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
+                  KIRANA INBOUND SCOPE
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs mt-0.5">
+                Showing {personaScopedLines.length} incoming allocations reserved for Ganesh Kirana &amp; General Store. Transaction data for other stores is restricted.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 whitespace-nowrap">
+            Inbound Delivery Stream
+          </span>
+        </div>
+      )}
+
+      {userRole === 'rohit' && (
+        <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-sm">
+              R
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-indigo-300 text-sm">
+                  Rohit Deshpande — Distribution Planner (Statewide Planning)
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono">
+                  STATEWIDE SCOPE
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs mt-0.5">
+                Statewide multi-warehouse allocation matrix active across 3 hubs and 10 kirana stores ({personaScopedLines.length} total lines). Planning objectives and route-risk tolerances configurable below.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 whitespace-nowrap">
+            Optimization Engine Active
+          </span>
+        </div>
+      )}
+
+      {userRole === 'priya' && (
+        <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold text-sm">
+              P
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-purple-300 text-sm">
+                  Priya Sharma — System Administrator (Systemwide Governance)
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono">
+                  ADMINISTRATIVE OVERVIEW
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs mt-0.5">
+                Systemwide administrative inspection mode. All allocation overrides and security changes are recorded in the immutable audit log.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 whitespace-nowrap">
+            Audit Trail Logging
+          </span>
+        </div>
+      )}
+
       {/* Top Action Console */}
       <div className="glass-panel p-6 rounded-2xl border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div>
@@ -315,50 +489,300 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={() => onGeneratePlan(false)}
-            disabled={isGenerating}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 select-none cursor-pointer"
-          >
-            {isGenerating ? (
-              <>
-                <RotateCcw className="w-4 h-4 animate-spin text-white" />
-                <span>Computing Optimizations...</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-current" />
-                <span>Run Allocation Engine</span>
-              </>
-            )}
-          </button>
+          {userRole === 'ganesh' ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => triggerFeedback('✓ Inbound delivery order receipt acknowledged for Kolhapur Kirana (STORE-MH-KOL-001).')}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs text-white bg-amber-600 hover:bg-amber-500 transition-all shadow-md shadow-amber-600/30 select-none cursor-pointer"
+                title="Acknowledge incoming shipment from Pune Logistics Hub"
+              >
+                <PackageCheck className="w-4 h-4 text-white" />
+                <span>Acknowledge Inbound Deliveries</span>
+              </button>
 
-          {planRun && planRun.lines.length > 0 && (
+              <button
+                type="button"
+                onClick={() => triggerFeedback('✓ Rapid 24h restock request signaled to Pune Central Hub dispatcher.')}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-bold text-xs text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all select-none cursor-pointer"
+                title="Request priority replenishment for store stockouts"
+              >
+                <RotateCcw className="w-4 h-4 text-amber-400" />
+                <span>Request 24h Restock</span>
+              </button>
+            </div>
+          ) : userRole === 'sunita' ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {scopedPlanRun && scopedPlanRun.lines.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsApproveAllOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/30 select-none cursor-pointer"
+                  title="Approve all Pune outbound lines for dock picking"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approve Pune Lines ({scopedPlanRun.lines.length})</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => triggerFeedback('✓ Pune Hub FEFO stock reservations synchronized with active dock picking slips.')}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-bold text-xs text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all select-none cursor-pointer"
+                title="Inspect Pune Hub stock status and dock picking"
+              >
+                <WarehouseIcon className="w-4 h-4 text-emerald-400" />
+                <span>Sync Dock Batches</span>
+              </button>
+            </div>
+          ) : (
             <>
               <button
                 type="button"
-                onClick={() => setIsApproveAllOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/30 select-none cursor-pointer"
-                title="Review and approve all recommended lines"
+                onClick={() => onGeneratePlan(false)}
+                disabled={isGenerating}
+                className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 select-none cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Approve All ({planRun.lines.length} Lines)</span>
+                {isGenerating ? (
+                  <>
+                    <RotateCcw className="w-4 h-4 animate-spin text-white" />
+                    <span>Computing Optimizations...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Run Allocation Engine</span>
+                  </>
+                )}
               </button>
 
-              <button
-                type="button"
-                onClick={onSimulateStaleConflict}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-bold text-xs text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all select-none cursor-pointer"
-                title="Simulate 409 conflict when warehouse inventory changes during planner review (FR-11, T9)"
-              >
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span className="hidden sm:inline">Simulate 409 Conflict</span>
-                <span className="sm:hidden">409 Test</span>
-              </button>
+              {scopedPlanRun && scopedPlanRun.lines.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsApproveAllOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/30 select-none cursor-pointer"
+                    title="Review and approve recommended lines"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Approve All ({scopedPlanRun.lines.length} Lines)</span>
+                  </button>
+
+                  {userRole === 'rohit' ? (
+                    <button
+                      type="button"
+                      onClick={onSimulateStaleConflict}
+                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-bold text-xs text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all select-none cursor-pointer"
+                      title="Simulate 409 conflict when warehouse inventory changes during planner review (FR-11, T9)"
+                    >
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <span className="hidden sm:inline">Simulate 409 Conflict</span>
+                      <span className="sm:hidden">409 Test</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('✓ Immutable statewide audit matrix exported to system log.')}
+                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-bold text-xs text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition-all select-none cursor-pointer"
+                      title="Export Allocation Audit Log"
+                    >
+                      <FileText className="w-4 h-4 text-purple-400" />
+                      <span>Audit Export</span>
+                    </button>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
+      </div>
+
+      {/* Planner Objectives & Optimization Controls (Rohit Deshpande Scope) */}
+      <div className={`p-5 rounded-2xl border transition-all ${
+        theme === 'day' ? 'bg-white border-slate-200 shadow-sm' : 'glass-panel border-slate-800 shadow-xl'
+      }`}>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5" />
+                Planning Objectives &amp; Optimization Parameters
+              </span>
+              <span className="text-xs text-slate-500">
+                • Persona:{' '}
+                <strong className={
+                  userRole === 'sunita'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : userRole === 'ganesh'
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : userRole === 'priya'
+                    ? 'text-purple-600 dark:text-purple-400'
+                    : 'text-indigo-600 dark:text-indigo-400'
+                }>
+                  {userRole === 'sunita'
+                    ? 'Sunita Deshmukh (Pune Hub Dispatch Scope)'
+                    : userRole === 'ganesh'
+                    ? 'Ganesh Patil (Kolhapur Kirana Inbound Scope)'
+                    : userRole === 'priya'
+                    ? 'Priya Sharma (Systemwide Audit Scope)'
+                    : 'Rohit Deshpande (Statewide Planning)'}
+                </strong>
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              {userRole === 'ganesh' ? (
+                <span>Inbound store replenishment focus for <strong>Ganesh Kirana (Kolhapur)</strong> • Hard Constraint: <strong>&ge;70% Shelf Life on Arrival</strong></span>
+              ) : userRole === 'sunita' ? (
+                <span>Outbound dispatch matrix for <strong>Pune Central Logistics Hub (W-PUN)</strong> • Hard Constraint: <strong>Strict FEFO Picking</strong></span>
+              ) : (
+                <span>Horizon: <strong>{planningHorizonDays} Days</strong> • Target Service Level: <strong>{serviceTargetPct}%</strong> • Route-Risk Tolerance: <strong>{routeRiskTolerance}</strong> • Fleet: <strong>{vehicleSelection === 'MIXED_FLEET' ? 'Mixed FMCG Commercial Fleet' : vehicleSelection}</strong></span>
+              )}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-stretch lg:self-auto shrink-0">
+            {userRole === 'ganesh' ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                <span>SLA: &ge;70% Fresh Shelf Life Guaranteed</span>
+              </div>
+            ) : userRole === 'sunita' ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Dock Policy: Strict FEFO Picking</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsPlannerControlsOpen(!isPlannerControlsOpen)}
+                className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  theme === 'day'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+                <span>{isPlannerControlsOpen ? 'Hide Parameters' : 'Adjust Objectives & Parameters'}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPlannerControlsOpen ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Expandable Planner Controls Console (Rohit and Priya only) */}
+        {isPlannerControlsOpen && (userRole === 'rohit' || userRole === 'priya') && (
+          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+              {/* Objective Selector */}
+              <div className={`p-3.5 rounded-xl border ${theme === 'day' ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                  Optimization Objective
+                </label>
+                <select
+                  value={planningObjective}
+                  onChange={e => {
+                    setPlanningObjective(e.target.value as any);
+                    triggerFeedback(`Planning objective updated to: ${e.target.value}`);
+                  }}
+                  className={`w-full p-2 rounded-lg border text-xs font-semibold ${
+                    theme === 'day' ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-800 border-slate-700 text-white'
+                  }`}
+                >
+                  <option value="SERVICE_MARGIN">Maximize Service Level &amp; Margin</option>
+                  <option value="MIN_FREIGHT">Minimize Direct Logistics Freight</option>
+                  <option value="RAPID_FEFO">Aggressive FEFO Expiry Clearance</option>
+                </select>
+                <span className="text-[10px] text-slate-500 mt-1 block">Value-Tier Greedy allocation priority</span>
+              </div>
+
+              {/* Service Target Slider */}
+              <div className={`p-3.5 rounded-xl border ${theme === 'day' ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Target Service Level</label>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{serviceTargetPct}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="80"
+                  max="99"
+                  value={serviceTargetPct}
+                  onChange={e => setServiceTargetPct(parseInt(e.target.value))}
+                  className="w-full accent-indigo-600"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>80% (Min)</span>
+                  <span>95% (SLA Target)</span>
+                  <span>99% (Peak)</span>
+                </div>
+              </div>
+
+              {/* Planning Horizon Selector */}
+              <div className={`p-3.5 rounded-xl border ${theme === 'day' ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                  Planning Horizon (Days)
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[7, 14, 21].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setPlanningHorizonDays(d);
+                        triggerFeedback(`Planning horizon set to ${d} days.`);
+                      }}
+                      className={`py-1.5 rounded-lg font-bold text-xs transition-all ${
+                        planningHorizonDays === d
+                          ? theme === 'day' ? 'btn-navy text-white' : 'bg-indigo-600 text-white'
+                          : theme === 'day' ? 'bg-white border border-slate-200 text-slate-700' : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {d} Days
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-slate-500 mt-1 block">FMCG replenishment cycle window</span>
+              </div>
+
+              {/* Route-Risk Tolerance */}
+              <div className={`p-3.5 rounded-xl border ${theme === 'day' ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Route-Risk Tolerance</label>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{routeRiskTolerance}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.3"
+                  max="0.9"
+                  step="0.05"
+                  value={routeRiskTolerance}
+                  onChange={e => setRouteRiskTolerance(parseFloat(e.target.value))}
+                  className="w-full accent-indigo-600"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>0.3 (Cautious)</span>
+                  <span>0.65 (Medium Ghat)</span>
+                  <span>0.9 (Direct)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Hard Constraints & Policy Authority Indicator */}
+            <div className={`p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs ${
+              theme === 'day' ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-indigo-950/20 border-indigo-500/30 text-indigo-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>
+                  <strong>Active Hard Constraints:</strong> Zero Negative Stock • Shelf-Life on Arrival &ge; 70% • Kirana Storage Limits • Vehicle Lane Width Clearance
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 shrink-0">
+                <Lock className="w-3.5 h-3.5 text-amber-500" />
+                <span>Planner Policy: Cannot silently edit warehouse batch stock</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action Feedback Notification Banner */}
@@ -403,7 +827,7 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
       )}
 
       {/* Section 2: Dashboard Summary KPIs */}
-      <PlanKpiCards planRun={planRun} onFilterClick={handleKpiFilterClick} />
+      <PlanKpiCards planRun={scopedPlanRun} onFilterClick={handleKpiFilterClick} />
 
       {/* AI Executive Briefing & Ollama Causal Driver Insights */}
       {planRun && (planRun.executiveDispatchBriefing || (planRun.keyFeatureInsights && planRun.keyFeatureInsights.length > 0)) && (
@@ -564,6 +988,7 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
                 onEdit={handleOpenOverride}
                 onApprove={handleApproveLineWithFeedback}
                 isApproving={approvingLineId === line.id}
+                userRole={userRole}
               />
             );
           })}
@@ -766,27 +1191,40 @@ export const PlanGeneratorView: React.FC<PlanGeneratorViewProps> = ({
                             <span>Explain</span>
                           </button>
 
-                          {/* Override / Edit Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenOverride(line)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-                            title="Override allocation quantity with mandatory justification"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
+                          {userRole === 'ganesh' ? (
+                            <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-1 rounded-lg flex items-center gap-1">
+                              <Truck className="w-3 h-3 text-amber-400" />
+                              <span>Inbound</span>
+                            </span>
+                          ) : userRole === 'sunita' && line.warehouseId !== 'WH-PUN' && line.warehouseId !== 'WH-01' ? (
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-1 rounded-lg border border-slate-700">
+                              Non-Pune Hub
+                            </span>
+                          ) : (
+                            <>
+                              {/* Override / Edit Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenOverride(line)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                                title="Override allocation quantity with mandatory justification"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
 
-                          {/* Approve Button */}
-                          {line.status !== 'APPROVED' && line.status !== 'STALE' && (
-                            <button
-                              type="button"
-                              onClick={() => handleApproveLineWithFeedback(line.id)}
-                              disabled={approvingLineId === line.id}
-                              className="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/50 transition-colors cursor-pointer disabled:opacity-50"
-                              title="Approve and reserve stock atomically"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
+                              {/* Approve Button */}
+                              {line.status !== 'APPROVED' && line.status !== 'STALE' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApproveLineWithFeedback(line.id)}
+                                  disabled={approvingLineId === line.id}
+                                  className="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/50 transition-colors cursor-pointer disabled:opacity-50"
+                                  title="Approve and reserve stock atomically"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
